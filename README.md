@@ -332,6 +332,85 @@ npm test
 
 ## Deployment
 
+### Production Deployment with Render
+
+Render provides a simple way to deploy the backend from GitHub with managed infrastructure.
+
+#### Backend Deployment
+
+1. **Prepare your repository:**
+   - Ensure `backend/Dockerfile` is present and properly configured
+   - Ensure `backend/.dockerignore` is present to exclude unnecessary files
+   - Push your code to GitHub
+
+2. **Create a Render web service:**
+   - Go to [Render Dashboard](https://dashboard.render.com/)
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Configure the service:
+     - **Name**: `elexousia-weather-backend` (or your preferred name)
+     - **Region**: Choose a region close to your users
+     - **Branch**: `main` (or your production branch)
+     - **Runtime**: Docker
+     - **Docker Context**: `./backend`
+     - **Dockerfile Path**: `Dockerfile`
+
+3. **Configure environment variables:**
+   In the "Advanced" section, add the following environment variables:
+   ```env
+   DATABASE_URL=postgresql://user:password@your-db-host:5432/elexousia_weather
+   WEATHER_API_KEY=your_weatherapi_key_here
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   GOOGLE_REDIRECT_URI=https://your-app.onrender.com/auth/callback
+   SECRET_KEY=your_secret_key_here_32_chars_minimum
+   COOKIE_NAME=elexousia_session
+   ALLOWED_ORIGINS=https://your-app.onrender.com
+   ```
+
+4. **Configure database:**
+   - Create a PostgreSQL database in Render (Database → New → PostgreSQL)
+   - Copy the internal database URL from the Render dashboard
+   - Update `DATABASE_URL` environment variable with the Render database URL
+
+5. **Deploy:**
+   - Click "Create Web Service"
+   - Render will build and deploy your backend automatically
+   - The backend will be available at `https://your-app.onrender.com`
+   - Render provides automatic SSL certificates
+
+#### Frontend Deployment
+
+Deploy the frontend to Vercel, Netlify, or Render Static Sites:
+
+**Option 1: Vercel**
+1. Connect your repository to Vercel
+2. Configure build settings:
+   - Framework: Vite
+   - Build command: `npm run build`
+   - Output directory: `dist`
+3. Add environment variables:
+   - `VITE_API_URL`: Your Render backend URL
+   - `VITE_GOOGLE_CLIENT_ID`: Your Google client ID
+4. Deploy
+
+**Option 2: Netlify**
+1. Connect your repository to Netlify
+2. Configure build settings:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3. Add environment variables in site settings
+4. Deploy
+
+**Option 3: Render Static Sites**
+1. Create a new "Static Site" in Render
+2. Connect your repository
+3. Configure:
+   - Build command: `cd frontend && npm install && npm run build`
+   - Publish directory: `frontend/dist`
+4. Add environment variables
+5. Deploy
+
 ### Production Deployment with Docker
 
 1. **Update environment files:**
