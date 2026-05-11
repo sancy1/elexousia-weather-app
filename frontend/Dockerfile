@@ -12,7 +12,17 @@ FROM nginx:alpine
 
 COPY --from=builder /app/dist/client /usr/share/nginx/html
 
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+RUN echo 'server { \
+    listen 80; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    gzip on; \
+    gzip_types text/css application/javascript application/json; \
+}' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
