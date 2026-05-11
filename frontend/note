@@ -1,0 +1,142 @@
+Use Open-Meteo instead (completely free, 16-day forecast)
+Open-Meteo is 100% free, no API key required, and returns up to 16 days of forecast. This is the better choice for your current stage.
+Find this in your backend/app/infrastructure/external/weather_api.py where you call the forecast endpoint and replace it:
+python# REPLACE your current WeatherAPI forecast call with this
+import httpx
+
+async def fetch_forecast_open_meteo(lat: float, lon: float, days: int = 7) -> dict:
+    """
+    Open-Meteo API — completely free, no key needed, up to 16 days.
+    Docs: https://open-meteo.com/en/docs
+    """
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude":           lat,
+        "longitude":          lon,
+        "daily": [
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "precipitation_probability_max",
+            "precipitation_sum",
+            "weathercode",
+            "windspeed_10m_max",
+            "uv_index_max",
+            "sunrise",
+            "sunset",
+        ],
+        "current_weather":    True,
+        "timezone":           "auto",
+        "forecast_days":      days,   # up to 16
+        "wind_speed_unit":    "kmh",
+        "temperature_unit":   "celsius",
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
+def parse_open_meteo_forecast(raw: dict) -> list:
+    """
+    Converts Open-Meteo response into the same ForecastDay format
+    your frontend already expects — no frontend changes needed.
+    """
+    daily  = raw["daily"]
+    dates  = daily["time"]
+    n      = len(dates)
+
+    # WMO weather code to human-readable condition mapping
+    WMO_CODES = {
+        0:  ("Clear sky",            "☀️"),
+        1:  ("Mainly clear",         "🌤️"),
+        2:  ("Partly cloudy",        "⛅"),
+        3:  ("Overcast",             "☁️"),
+        45: ("Foggy",                "🌫️"),
+        48: ("Icy fog",              "🌫️"),
+        51: ("Light drizzle",        "🌦️"),
+        53: ("Moderate drizzle",     "🌦️"),
+        55: ("Dense drizzle",        "🌧️"),
+        61: ("Slight rain",          "🌧️"),
+        63: ("Moderate rain",        "🌧️"),
+        65: ("Heavy rain",           "🌧️"),
+        71: ("Slight snow",          "🌨️"),
+        73: ("Moderate snow",        "❄️"),
+        75: ("Heavy snow",           "❄️"),
+        80: ("Slight showers",       "🌦️"),
+        81: ("Moderate showers",     "🌧️"),
+        82: ("Violent showers",      "⛈️"),
+        95: ("Thunderstorm",         "⛈️"),
+        99: ("Thunderstorm w/ hail", "⛈️"),
+    }
+
+    forecast = []
+    for i in range(n):
+        code      = daily["weathercode"][i] if daily.get("weathercode") else 0
+        condition, icon = WMO_CODES.get(code, ("Unknown", "🌡️"))
+
+        high_c    = daily["temperature_2m_max"][i]
+        low_c     = daily["temperature_2m_min"][i]
+
+        forecast.append({
+            "date":            dates[i],
+            "day_name":        _day_name(dates[i], i),
+            "high_c":          high_c,
+            "low_c":           low_c,
+            "high_f":          round(high_c * 9/5 + 32, 1),
+            "low_f":           round(low_c  * 9/5 + 32, 1),
+            "condition":       condition,
+            "icon":            icon,
+            "rain_chance_pct": daily["precipitation_probability_max"][i] or 0,
+            "total_rain_mm":   daily["precipitation_sum"][i] or 0,
+            "windspeed_max_kph": daily["windspeed_10m_max"][i] or 0,
+            "uv_index":        daily["uv_index_max"][i] or 0,
+            "sunrise":         daily["sunrise"][i].split("T")[1] if daily.get("sunrise") else "",
+            "sunset":          daily["sunset"][i].split("T")[1]  if daily.get("sunset")  else "",
+        })
+
+    return forecast
+
+
+def _day_name(date_str: str, index: int) -> str:
+    """Returns 'Today', 'Tomorrow', or day name like 'Monday'."""
+    from datetime import datetime
+    if index == 0: return "Today"
+    if index == 1: return "Tomorrow"
+    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%A")
+
+Then update your forecast endpoint in weather.py route:
+python# In your GET /api/weather/forecast handler
+# Change the days parameter default and max
+
+@router.get("/forecast")
+async def get_forecast(
+    city: str,
+    days: int = Query(default=7, ge=1, le=16),  # was 3, now 7 default, 16 max
+    unit: str = Query(default="C")
+):
+    location = resolve_city(city)
+    if not location:
+        raise HTTPException(404, f"City '{city}' not found")
+
+    raw      = await fetch_forecast_open_meteo(
+                   lat=location["latitude"],
+                   lon=location["longitude"],
+                   days=days
+               )
+    forecast = parse_open_meteo_forecast(raw)
+
+    return {
+        "city":     location["city_name"],
+        "country":  location["country_name"],
+        "days":     days,
+        "forecast": forecast
+    }
+
+Also update your .env — you can keep WEATHER_API_KEY for current conditions (WeatherAPI free tier still gives live current weather) and use Open-Meteo only for forecasts:
+dotenv# WeatherAPI.com — use for current conditions only (free tier)
+WEATHER_API_KEY=your_key
+
+# Open-Meteo — use for forecasts (free, no key needed)
+# No key required — just call the URL directly
+This hybrid approach gives you the best of both — WeatherAPI's rich current conditions data (humidity, UV, visibility, pressure) combined with Open-Meteo's free 16-day forecast. Your frontend already expects the same JSON shape so no frontend changes are needed once you update the parser.

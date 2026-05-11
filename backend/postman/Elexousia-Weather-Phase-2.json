@@ -1,0 +1,337 @@
+{
+  "info": {
+    "name": "Elexousia Weather API - Phase 2",
+    "description": "Authentication endpoints for Elexousia Weather API - OAuth flow, session management, user preferences",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "session_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "OAuth - Google",
+      "item": [
+        {
+          "name": "Initiate Google Login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google"]
+            },
+            "description": "Redirects to Google OAuth consent page. User will be prompted to authorize the app."
+          },
+          "response": []
+        },
+        {
+          "name": "Google Callback (Test)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google/callback?code=test_code&state=test_state",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google", "callback"],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "test_code"
+                },
+                {
+                  "key": "state",
+                  "value": "test_state"
+                }
+              ]
+            },
+            "description": "Handles Google OAuth callback. In real usage, this is called by Google after user authorization."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "OAuth - GitHub",
+      "item": [
+        {
+          "name": "Initiate GitHub Login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/github",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "github"]
+            },
+            "description": "Redirects to GitHub OAuth consent page. User will be prompted to authorize the app."
+          },
+          "response": []
+        },
+        {
+          "name": "GitHub Callback (Test)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/github/callback?code=test_code&state=test_state",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "github", "callback"],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "test_code"
+                },
+                {
+                  "key": "state",
+                  "value": "test_state"
+                }
+              ]
+            },
+            "description": "Handles GitHub OAuth callback. In real usage, this is called by GitHub after user authorization."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Session",
+      "item": [
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Returns the current authenticated user's profile. Requires valid session token in cookie or Authorization header."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "session_token={{session_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"id\": 1,\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"avatar_url\": \"https://avatar.com\",\n  \"initials\": \"JD\",\n  \"unit_preference\": \"C\",\n  \"theme\": \"system\",\n  \"provider\": \"google\",\n  \"created_at\": \"2025-01-01T00:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current User (Bearer Token)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Same as above but using Authorization header with Bearer token instead of cookie."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Preferences",
+      "item": [
+        {
+          "name": "Update Unit Preference",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_token={{session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_preference\": \"F\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "preferences"]
+            },
+            "description": "Update user's temperature unit preference (C or F)."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "session_token={{session_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"unit_preference\": \"F\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/preferences",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "preferences"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"id\": 1,\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"avatar_url\": \"https://avatar.com\",\n  \"initials\": \"JD\",\n  \"unit_preference\": \"F\",\n  \"theme\": \"system\",\n  \"provider\": \"google\",\n  \"created_at\": \"2025-01-01T00:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Theme Preference",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_token={{session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme\": \"dark\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "preferences"]
+            },
+            "description": "Update user's theme preference (light, dark, or system)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Both Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_token={{session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_preference\": \"C\",\n  \"theme\": \"light\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "preferences"]
+            },
+            "description": "Update both unit and theme preferences in one request."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Session Management",
+      "item": [
+        {
+          "name": "Logout",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_token={{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Deletes the session from database and clears the session cookie."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Cookie",
+                    "value": "session_token={{session_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/logout",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "logout"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Successfully logged out\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
