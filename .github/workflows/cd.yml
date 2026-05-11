@@ -1,0 +1,58 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Build and tag Docker image
+        working-directory: ./backend
+        run: |
+          docker build -t elexousia/weather-backend:${{ github.sha }} .
+          docker build -t elexousia/weather-backend:latest .
+      
+      - name: Push to Docker Hub
+        run: |
+          docker push elexousia/weather-backend:${{ github.sha }}
+          docker push elexousia/weather-backend:latest
+      
+      - name: Trigger Railway deployment
+        run: |
+          curl -X POST ${{ secrets.RAILWAY_DEPLOYMENT_WEBHOOK }}
+      
+      - name: Wait for health check
+        run: |
+          for i in {1..30}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://elexousia-weather.com/api/health)
+            if [ "$response" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Health check failed (attempt $i/30): $response"
+            sleep 10
+          done
+          echo "Health check failed after 30 attempts"
+          exit 1
+      
+      - name: Send deployment notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Deployment to production completed'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

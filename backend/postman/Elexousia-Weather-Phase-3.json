@@ -1,0 +1,235 @@
+{
+  "info": {
+    "name": "Elexousia Weather API - Phase 3",
+    "description": "Phase 3 Weather Core endpoints - Auto-detect, AI Chat, Forecast, What to Wear, Quick Chips",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Weather - Auto Detect",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/auto",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "auto"]
+        },
+        "description": "Auto-detect location from IP and return current weather + 7-day forecast"
+      }
+    },
+    {
+      "name": "Weather - Current",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/current?city=Lagos",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "current"],
+          "query": [
+            {
+              "key": "city",
+              "value": "Lagos"
+            }
+          ]
+        },
+        "description": "Get current weather for a named city"
+      }
+    },
+    {
+      "name": "Weather - Forecast",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/forecast?city=London&days=7",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "forecast"],
+          "query": [
+            {
+              "key": "city",
+              "value": "London"
+            },
+            {
+              "key": "days",
+              "value": "7"
+            }
+          ]
+        },
+        "description": "Get weather forecast for 1-7 days"
+      }
+    },
+    {
+      "name": "Weather - Compare",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/compare?city1=Lagos&city2=London",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "compare"],
+          "query": [
+            {
+              "key": "city1",
+              "value": "Lagos"
+            },
+            {
+              "key": "city2",
+              "value": "London"
+            }
+          ]
+        },
+        "description": "Compare current weather between two cities"
+      }
+    },
+    {
+      "name": "Weather - Hourly",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/hourly?city=Lagos&date=2026-05-06",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "hourly"],
+          "query": [
+            {
+              "key": "city",
+              "value": "Lagos"
+            },
+            {
+              "key": "date",
+              "value": "2026-05-06"
+            }
+          ]
+        },
+        "description": "Get 24-hour breakdown for a specific date"
+      }
+    },
+    {
+      "name": "Weather - Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/detail?city=Lagos&date=2026-05-06",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "detail"],
+          "query": [
+            {
+              "key": "city",
+              "value": "Lagos"
+            },
+            {
+              "key": "date",
+              "value": "2026-05-06"
+            }
+          ]
+        },
+        "description": "Get detailed weather for a specific day (rain, pressure, UV)"
+      }
+    },
+    {
+      "name": "Weather - What to Wear (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather/wear?city=Lagos",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "wear"],
+          "query": [
+            {
+              "key": "city",
+              "value": "Lagos"
+            }
+          ]
+        },
+        "description": "Get clothing recommendations for current conditions"
+      }
+    },
+    {
+      "name": "Weather - What to Wear (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"city\": \"Lagos\",\n  \"date\": \"2026-05-06\",\n  \"occasion\": \"work\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/weather/wear",
+          "host": ["{{base_url}}"],
+          "path": ["weather", "wear"]
+        },
+        "description": "Get clothing advice for specific date or occasion"
+      }
+    },
+    {
+      "name": "Chat - Send Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"What is the weather in Tokyo today?\",\n  \"session_id\": \"test-session-123\",\n  \"city_context\": \"Lagos\",\n  \"unit\": \"C\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/chat",
+          "host": ["{{base_url}}"],
+          "path": ["chat"]
+        },
+        "description": "Send message to AI agent with SSE streaming"
+      }
+    },
+    {
+      "name": "Chat - Stop",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/chat/stop?session_id=test-session-123",
+          "host": ["{{base_url}}"],
+          "path": ["chat", "stop"],
+          "query": [
+            {
+              "key": "session_id",
+              "value": "test-session-123"
+            }
+          ]
+        },
+        "description": "Cancel current streaming response for session"
+      }
+    },
+    {
+      "name": "Chips - Get All",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/chips",
+          "host": ["{{base_url}}"],
+          "path": ["chips"]
+        },
+        "description": "Get all active quick chips for prompt suggestions"
+      }
+    }
+  ]
+}

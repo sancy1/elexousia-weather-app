@@ -1,0 +1,60 @@
+{
+  "info": {
+    "name": "Elexousia Weather API - Phase 1",
+    "description": "Foundation endpoints for Elexousia Weather API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Get Full Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Database Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health/db",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health", "db"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Agent Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health/agent",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health", "agent"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
