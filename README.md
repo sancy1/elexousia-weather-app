@@ -11,7 +11,7 @@ An intelligent weather forecasting application powered by AI, featuring real-tim
 
 - **Real-Time Weather Data**: Current weather conditions with temperature, humidity, wind, UV index, and more
 - **7-Day Forecast**: Daily and hourly forecast views for any city worldwide
-- **AI Weather Assistant**: Conversational AI powered by LangChain and Ollama for personalized weather insights
+- **AI Weather Assistant**: Conversational AI powered by LangChain, LangGraph, and RAG for personalized weather insights
 - **User Authentication**: OAuth integration with Google for secure user accounts
 - **Saved Locations**: Save and manage your favorite weather locations
 - **Search History**: Track your recent weather searches
@@ -47,7 +47,6 @@ Before you begin, ensure you have the following installed:
 - **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
 - **Python** (v3.10 or higher) - [Download](https://www.python.org/)
 - **PostgreSQL** (v14 or higher) - [Download](https://www.postgresql.org/)
-- **Ollama** (for AI chat) - [Download](https://ollama.com/)
 - **Git** - [Download](https://git-scm.com/)
 
 Optional (for Docker deployment):
@@ -114,20 +113,6 @@ Optional (for Docker deployment):
    - Copy `.env.example` to `.env`
    - Set `VITE_API_URL` to your backend URL
 
-#### Ollama Setup
-
-1. **Install Ollama** from [ollama.com](https://ollama.com/)
-
-2. **Pull the required model:**
-   ```bash
-   ollama pull llama3.2
-   ```
-
-3. **Start Ollama:**
-   ```bash
-   ollama serve
-   ```
-
 ### Option 2: Docker Deployment
 
 1. **Clone the repository:**
@@ -165,11 +150,6 @@ WEATHER_API_KEY=your_weatherapi_key_here
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=http://localhost:8080/auth/callback
-
-# AI (Ollama)
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2
-LANGCHAIN_PROJECT=elexousia-weather
 
 # Session
 SECRET_KEY=your_secret_key_here_32_chars_minimum
@@ -279,8 +259,9 @@ Once the backend is running, access the interactive API documentation:
 - **Python 3.10+** - Programming language
 - **PostgreSQL** - Database
 - **Psycopg2** - Database adapter
-- **LangChain** - AI framework
-- **Ollama** - LLM runtime
+- **LangChain** - AI framework for LLM orchestration
+- **LangGraph** - Agent workflow orchestration
+- **RAG** - Retrieval-Augmented Generation for context-aware responses
 - **Pydantic** - Data validation
 - **Uvicorn** - ASGI server
 
@@ -411,11 +392,6 @@ Contributions are welcome! Please follow these steps:
 - Check that backend is running
 - Verify Node.js version is 18+
 
-**AI chat not working:**
-- Ensure Ollama is running (`ollama serve`)
-- Verify the model is pulled (`ollama pull llama3.2`)
-- Check OLLAMA_BASE_URL in `.env`
-
 ### Getting Help
 
 - Check the [Technical Documentation](./docs/Elexousia_Weather_FastAPI_Development_Plan.pdf) for detailed implementation information
@@ -429,7 +405,7 @@ This project is proprietary software. All rights reserved.
 ## Acknowledgments
 
 - Weather data provided by [WeatherAPI.com](https://www.weatherapi.com/)
-- AI powered by [LangChain](https://langchain.com/) and [Ollama](https://ollama.com/)
+- AI capabilities powered by [LangChain](https://langchain.com/)
 - UI components inspired by modern design patterns
 
 ---
