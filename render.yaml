@@ -65,7 +65,6 @@ services:
     # Root Directory in Render: frontend
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    healthCheckPath: /
     envVars:
       - key: VITE_API_URL
         value: https://elexousia-weather-backend.onrender.com
