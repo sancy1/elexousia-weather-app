@@ -4,8 +4,9 @@ services:
     env: docker
     plan: free
     region: oregon
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    # Root Directory in Render: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -63,6 +64,7 @@ services:
     env: node
     plan: free
     region: oregon
+    # Root Directory in Render: frontend
     buildCommand: npm run build
     startCommand: npm run start
     healthCheckPath: /health
