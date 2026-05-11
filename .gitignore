@@ -104,6 +104,9 @@ docs/*.txt
 *.txt
 !backend/requirements/*.txt
 
+# Allow frontend/src/lib
+!frontend/src/lib/
+
 # Postman collections (if they contain sensitive data)
 postman/*.json
 postman/*.postman_collection
