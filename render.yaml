@@ -1,0 +1,59 @@
+services:
+  - type: web
+    name: elexousia-weather-backend
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+        generateValue: true
+      - key: WEATHER_API_KEY
+        sync: false
+      - key: DEBUG
+        value: false
+      - key: ENVIRONMENT
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://elexousia-weather-app-frontend.onrender.com,https://elexousia-weather.com
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OLLAMA_BASE_URL
+        value: http://localhost:11434
+      - key: OLLAMA_MODEL
+        value: llama3.2
+      - key: EMBED_MODEL
+        value: mxbai-embed-large
+      - key: EMBED_DIM
+        value: 1024
+      - key: WEATHER_API_BASE
+        value: https://api.weatherapi.com/v1
+      - key: SESSION_EXPIRY_DAYS
+        value: 1
+      - key: RATE_LIMIT_CHAT
+        value: 30
+      - key: RATE_LIMIT_WEATHER
+        value: 100
+      - key: RATE_LIMIT_AUTH
+        value: 10
+      - key: RATE_LIMIT_DEFAULT
+        value: 200
+      - key: WEATHER_CACHE_TTL_SECONDS
+        value: 600
+      - key: MEMORY_CACHE_MAX_SIZE
+        value: 1000
+      - key: COOKIE_NAME
+        value: elexousia_session
+      - key: COOKIE_SECURE
+        value: true
+      - key: COOKIE_HTTPONLY
+        value: true
+      - key: COOKIE_SAMESITE
+        value: lax
