@@ -1,12 +1,12 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": ".output",
+  "outputDirectory": ".vercel/output",
   "framework": null,
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "regions": ["iad1"],
   "env": {
-    "VITE_API_URL": {
+    "VITE_API_BASE_URL": {
       "description": "Backend API URL"
     },
     "VITE_GOOGLE_OAUTH_ENABLED": {
