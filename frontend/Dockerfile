@@ -9,4 +9,4 @@ COPY . .
 RUN npm run build
 
 EXPOSE 10000
-CMD ["npx", "serve", "-s", "dist/client", "-l", "10000", "-n"]
+CMD ["sh", "-c", "PORT=10000 node dist/server/index.js"]
