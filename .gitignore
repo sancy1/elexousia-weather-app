@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 *.env
+.envprod
 
 # Python
 __pycache__/
@@ -98,7 +99,10 @@ docs/*.md
 docs/*.txt
 *.docx
 *.doc
+
+# Ignore .txt files except for requirements
 *.txt
+!backend/requirements/*.txt
 
 # Postman collections (if they contain sensitive data)
 postman/*.json
