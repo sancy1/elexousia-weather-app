@@ -56,15 +56,3 @@ services:
         value: true
       - key: COOKIE_SAMESITE
         value: lax
-
-  - type: web
-    name: elexousia-weather-app
-    env: static
-    plan: free
-    region: oregon
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist/client
-    envVars:
-      - key: VITE_API_URL
-        value: https://elexousia-weather-backend.onrender.com

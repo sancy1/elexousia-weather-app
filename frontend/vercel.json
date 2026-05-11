@@ -1,0 +1,25 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".output",
+  "framework": null,
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "env": {
+    "VITE_API_URL": {
+      "description": "Backend API URL"
+    },
+    "VITE_GOOGLE_OAUTH_ENABLED": {
+      "description": "Enable Google OAuth"
+    },
+    "VITE_GITHUB_OAUTH_ENABLED": {
+      "description": "Enable GitHub OAuth"
+    },
+    "VITE_ENABLE_IDE_MODE": {
+      "description": "Enable IDE mode"
+    },
+    "VITE_ENABLE_AGENT_MODE": {
+      "description": "Enable agent mode"
+    }
+  }
+}
