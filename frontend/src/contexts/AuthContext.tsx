@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { authApi } from "@/lib/auth.ts";
+import { authApi } from "@/lib/auth";
 import type { UserProfile } from "@/lib/api-types";
 
 interface AuthContextType {
