@@ -59,14 +59,18 @@ services:
 
   - type: web
     name: elexousia-weather-app
-    env: docker
+    env: node
     plan: free
     region: oregon
     rootDir: frontend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server/index.js
     envVars:
       - key: VITE_API_URL
         value: https://elexousia-weather-backend.onrender.com
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: PORT
+        value: 10000
