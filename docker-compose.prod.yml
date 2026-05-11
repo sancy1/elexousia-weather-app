@@ -12,9 +12,6 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - OLLAMA_BASE_URL=http://ollama:11434
-    depends_on:
-      - ollama
     restart: always
     networks:
       - elexousia-network
@@ -32,21 +29,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=https://elexousia-weather.com
+      - VITE_API_URL=https://elexousia-weather-app-backend.onrender.com
     depends_on:
       - backend
-    restart: always
-    networks:
-      - elexousia-network
-
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0
     restart: always
     networks:
       - elexousia-network
@@ -65,10 +50,6 @@ services:
     restart: always
     networks:
       - elexousia-network
-
-volumes:
-  ollama-data:
-    driver: local
 
 networks:
   elexousia-network:
