@@ -64,7 +64,7 @@ services:
     region: oregon
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: PORT=10000 HOST=0.0.0.0 node dist/server/index.js
+    startCommand: PORT=10000 HOST=0.0.0.0 npm run start
     envVars:
       - key: VITE_API_URL
         value: https://elexousia-weather-backend.onrender.com
