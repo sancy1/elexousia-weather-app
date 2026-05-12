@@ -20,13 +20,8 @@ import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Condition } from "@/components/weather/data";
 
+// Note: the 'head' property is removed as it is only for SSR.
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "EL-Exousia Weather — AI Weather Intelligence" },
-      { name: "description", content: "Real-time weather and conversational AI forecasts for any city in the world." },
-    ],
-  }),
   component: Index,
 });
 
@@ -36,63 +31,57 @@ function Index() {
   const [selectedDay, setSelectedDay] = useState(0);
   const [activeHistory, setActiveHistory] = useState("1");
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat);
-  const [isTyping, setIsTyping] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
-  const [city, setCity] = useState<string>("London"); // Local city state that can be overridden
+  const [city, setCity] = useState<string>("London");
 
-  // Auto-detect location on load (only set if city is still default London)
-  const { data: autoData, isLoading: autoLoading, error: autoError } = useAutoDetect();
+  // 1. Client-side Meta Tag Management
+  useEffect(() => {
+    document.title = "EL-Exousia Weather — AI Weather Intelligence";
+    const metaDesc = document.querySelector('meta[name="description"]');
+    const content = "Real-time weather and conversational AI forecasts for any city in the world.";
+    
+    if (metaDesc) {
+      metaDesc.setAttribute("content", content);
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = "description";
+      meta.content = content;
+      document.head.appendChild(meta);
+    }
+  }, []);
+
+  // 2. Data Fetching Hooks
+  const { data: autoData } = useAutoDetect();
   
   useEffect(() => {
     if (autoData?.city && city === "London") {
       setCity(autoData.city);
     }
   }, [autoData, city]);
+
   const { data: weatherData, isLoading: weatherLoading, error: weatherError } = useWeather(city, true);
-  
-  // Get forecast
   const { data: forecastData, isLoading: forecastLoading } = useForecast(city, true, 7);
-  
-  // Get weather detail - pass today's date
   const today = new Date().toISOString().split('T')[0];
-  
-  // Get weather detail - pass today's date
   const { data: detailData, isLoading: detailLoading } = useWeatherDetail(city, today, true);
-  
-  // Get clothing advice
   const { data: clothingData } = useClothingAdvice(city, true);
-  
-  // Chat functionality
-  const { sendMessage, stopChat, isStreaming, currentResponse, resolvedCity } = useChat();
+
+  // 3. Chat functionality
+  const { sendMessage, isStreaming, currentResponse, resolvedCity } = useChat();
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
-  // Update city when resolved from chat
   useEffect(() => {
     if (resolvedCity && resolvedCity !== city) {
-      console.log("Updating city from chat:", resolvedCity);
       setCity(resolvedCity);
     }
   }, [resolvedCity, city]);
 
-  // Debug: log city changes
-  useEffect(() => {
-    console.log("Current city:", city);
-  }, [city]);
-
   const handleSend = async (text: string) => {
     const id = Date.now().toString();
-    setMessages((m) => [
-      ...m,
-      { id, role: "user", text, time: "now" },
-    ]);
+    setMessages((m) => [...m, { id, role: "user", text, time: "now" }]);
     
-    // Add empty agent message that will be updated during streaming
     const agentId = Date.now().toString() + "_agent";
     setStreamingMessageId(agentId);
-    setMessages((m) => [
-      ...m,
-      { id: agentId, role: "agent", text: "", time: "now" },
-    ]);
+    setMessages((m) => [...m, { id: agentId, role: "agent", text: "", time: "now" }]);
     
     try {
       await sendMessage(text, undefined, city, unit);
@@ -107,10 +96,8 @@ function Index() {
     }
   };
 
-  // Update the streaming message in real-time
   useEffect(() => {
     if (streamingMessageId && currentResponse) {
-      console.log("Updating streaming message:", streamingMessageId, currentResponse);
       setMessages((m) =>
         m.map((msg) =>
           msg.id === streamingMessageId ? { ...msg, text: currentResponse } : msg
@@ -119,12 +106,6 @@ function Index() {
     }
   }, [currentResponse, streamingMessageId]);
 
-  // Debug: log messages state
-  useEffect(() => {
-    console.log("Current messages:", messages);
-  }, [messages]);
-
-  // Map weather condition to UI condition type
   const mapCondition = (condition: string): Condition => {
     const lower = condition.toLowerCase();
     if (lower.includes("rain") || lower.includes("shower")) return "rainy";
@@ -143,7 +124,6 @@ function Index() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-primary-glow/8 blur-[120px]" />
@@ -175,38 +155,17 @@ function Index() {
             ) : error ? (
               <div className="flex items-center justify-center py-12 px-4">
                 <div className="max-w-md w-full text-center">
-                  <div className="rounded-2xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/20 p-6 shadow-[0_8px_30px_-10px_var(--destructive)]">
+                  <div className="rounded-2xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/20 p-6 shadow-lg">
                     <div className="h-14 w-14 rounded-full bg-destructive/15 flex items-center justify-center mx-auto mb-4">
                       <AlertCircle className="h-7 w-7 text-destructive" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">Oops! We couldn't load the weather</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Something went wrong while fetching weather data for "{city}". This could be due to a network issue or the city name might be incorrect.
+                      Something went wrong while fetching data for "{city}".
                     </p>
-                    <div className="space-y-2 text-left bg-background/50 rounded-lg p-3 mb-4">
-                      <p className="text-xs font-medium text-foreground mb-2">Try these options:</p>
-                      <ul className="text-xs text-muted-foreground space-y-1.5">
-                        <li className="flex items-start gap-2">
-                          <Check className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                          <span>Check the city name spelling and try again</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                          <span>Try a different city name (e.g., "London" instead of "London, UK")</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                          <span>Check your internet connection</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <Check className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                          <span>If the problem persists, try again in a few minutes</span>
-                        </li>
-                      </ul>
-                    </div>
                     <button
                       onClick={() => window.location.reload()}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all shadow-[0_4px_12px_-4px_var(--primary)] hover:shadow-[0_6px_16px_-4px_var(--primary)]"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all"
                     >
                       <RefreshCw className="h-4 w-4" />
                       Try Again
