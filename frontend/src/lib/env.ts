@@ -11,7 +11,8 @@ const getEnvVar = (key: string, defaultValue?: string): string => {
 
 export const env = {
   // API Configuration
-  API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "https://elexousia-weather-backend.onrender.com"),
+  // API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "https://elexousia-weather-backend.onrender.com"),
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "",
 
   // OAuth Configuration
   GOOGLE_OAUTH_ENABLED: getEnvVar("VITE_GOOGLE_OAUTH_ENABLED", "true") === "true",
