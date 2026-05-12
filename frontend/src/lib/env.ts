@@ -13,16 +13,16 @@ const getEnvVar = (key: string, defaultValue?: string): string => {
 
 export const env = {
   // API Configuration
-  API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "http://localhost:8000"),
-  
+  API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "https://elexousia-weather-backend.onrender.com"),
+
   // OAuth Configuration
   GOOGLE_OAUTH_ENABLED: getEnvVar("VITE_GOOGLE_OAUTH_ENABLED", "true") === "true",
   GITHUB_OAUTH_ENABLED: getEnvVar("VITE_GITHUB_OAUTH_ENABLED", "true") === "true",
-  
+
   // Feature Flags
   ENABLE_IDE_MODE: getEnvVar("VITE_ENABLE_IDE_MODE", "false") === "true",
   ENABLE_AGENT_MODE: getEnvVar("VITE_ENABLE_AGENT_MODE", "false") === "true",
-  
+
   // Environment
   IS_DEVELOPMENT: import.meta.env.DEV,
   IS_PRODUCTION: import.meta.env.PROD,
