@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vinxi build",
+    "build": "npx vinxi build",
     "build:dev": "vite build --mode development",
     "start": "vinxi start",
     "preview": "vite preview",
