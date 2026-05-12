@@ -702,13 +702,22 @@ except json.JSONDecodeError as e:
     ALLOWED_ORIGINS_LIST = ["http://localhost:3000", "http://localhost:5173", "https://elexousia-weatherforecast-lovat.vercel.app"]
 
 # Add CORS middleware
+# Add CORS middleware - using settings from config.py
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS_LIST,
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=ALLOWED_ORIGINS_LIST,
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+#     allow_headers=["*"],
+# )
 
 # Add SessionMiddleware after CORS
 app.add_middleware(
