@@ -20,7 +20,7 @@ from app.core.oauth import oauth
 logger = logging.getLogger(__name__)
 
 # Frontend URL for OAuth callbacks (use environment variable for flexibility)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8080")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -107,7 +107,7 @@ async def google_callback(request: Request):
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=True,  # Set to True in production with HTTPS
             samesite="lax",
             max_age=86400,  # 24 hours
             path="/"
