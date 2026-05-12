@@ -5,8 +5,8 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vinxi dev",
-    "build": "vinxi build",
+    "dev": "vite dev",
+    "build": "vite build",
     "start": "vinxi start",
     "preview": "vite preview",
     "lint": "eslint .",
