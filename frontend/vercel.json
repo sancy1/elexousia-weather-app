@@ -1,8 +1,11 @@
 {
+  "framework": "vite",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/client",
-  "framework": null,
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "regions": ["iad1"]
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
