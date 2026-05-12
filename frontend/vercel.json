@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "outputDirectory": ".vercel/output",
   "framework": null,
   "devCommand": "npm run dev",
   "installCommand": "npm install",
