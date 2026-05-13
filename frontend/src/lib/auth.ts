@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from "./api-client";
+import { env } from "./env";
 import type { UserProfile, PreferencesUpdate } from "./api-types";
 
 /**
@@ -15,7 +16,7 @@ export const authApi = {
    * Redirects to Google OAuth consent screen
    */
   loginWithGoogle: () => {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/auth/google`;
+    window.location.href = `${env.API_BASE_URL}/api/auth/google`;
   },
 
   /**
@@ -23,7 +24,7 @@ export const authApi = {
    * Redirects to GitHub OAuth consent screen
    */
   loginWithGitHub: () => {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/auth/github`;
+    window.location.href = `${env.API_BASE_URL}/api/auth/github`;
   },
 
   /**

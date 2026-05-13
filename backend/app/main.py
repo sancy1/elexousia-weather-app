@@ -507,7 +507,7 @@ FILE: backend/app/main.py
 Elexousia Weather API - Main Application
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -545,80 +545,80 @@ async def notification_checker_task():
             logger.info("Running notification check task...")
             
             async with get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                # Get all saved locations from weather_saved_locations
-                cursor.execute("""
-                    SELECT id, user_id, city_name, latitude, longitude
-                    FROM weather_saved_locations
-                """)
-                
-                locations = cursor.fetchall()
-                
                 notifications_created = 0
-                
-                for loc in locations:
-                    location_id, user_id, city_name, lat, lon = loc
+                cursor = conn.cursor()
+                try:
+                    # Get all saved locations from weather_saved_locations
+                    cursor.execute("""
+                        SELECT id, user_id, city_name, latitude, longitude
+                        FROM weather_saved_locations
+                    """)
                     
-                    try:
-                        # Get forecast for today
-                        forecast = await fetch_forecast(lat, lon, days=1)
-                        today = forecast["forecast"]["forecastday"][0]["day"]
+                    locations = cursor.fetchall()
+                    
+                    for loc in locations:
+                        location_id, user_id, city_name, lat, lon = loc
                         
-                        # Check for rain alert (>70% chance)
-                        if today["daily_chance_of_rain"] > 70:
-                            cursor.execute("""
-                                INSERT INTO weather_notifications 
-                                (user_id, type, city_name, title, message, is_read)
-                                VALUES (%s, %s, %s, %s, %s, FALSE)
-                                ON CONFLICT DO NOTHING
-                            """, (
-                                user_id,
-                                "rain_alert",
-                                city_name,
-                                "Rain expected today",
-                                f"{today['daily_chance_of_rain']}% chance of rain in {city_name}. Pack an umbrella."
-                            ))
-                            notifications_created += cursor.rowcount
-                        
-                        # Check for extreme heat (>35°C)
-                        if today["maxtemp_c"] > 35:
-                            cursor.execute("""
-                                INSERT INTO weather_notifications 
-                                (user_id, type, city_name, title, message, is_read)
-                                VALUES (%s, %s, %s, %s, %s, FALSE)
-                                ON CONFLICT DO NOTHING
-                            """, (
-                                user_id,
-                                "heat_alert",
-                                city_name,
-                                "Extreme heat warning",
-                                f"Temperature in {city_name} will reach {today['maxtemp_c']}°C. Stay hydrated."
-                            ))
-                            notifications_created += cursor.rowcount
-                        
-                        # Check for extreme cold (<0°C)
-                        if today["mintemp_c"] < 0:
-                            cursor.execute("""
-                                INSERT INTO weather_notifications 
-                                (user_id, type, city_name, title, message, is_read)
-                                VALUES (%s, %s, %s, %s, %s, FALSE)
-                                ON CONFLICT DO NOTHING
-                            """, (
-                                user_id,
-                                "cold_alert",
-                                city_name,
-                                "Freezing warning",
-                                f"Temperature in {city_name} will drop to {today['mintemp_c']}°C. Dress warmly."
-                            ))
-                            notifications_created += cursor.rowcount
-                        
-                    except Exception as e:
-                        logger.error(f"Failed to check weather for {city_name}: {e}")
-                        continue
-                
-                conn.commit()
-                cursor.close()
+                        try:
+                            # Get forecast for today
+                            forecast = await fetch_forecast(lat, lon, days=1)
+                            today = forecast["forecast"]["forecastday"][0]["day"]
+                            
+                            # Check for rain alert (>70% chance)
+                            if today["daily_chance_of_rain"] > 70:
+                                cursor.execute("""
+                                    INSERT INTO weather_notifications 
+                                    (user_id, type, city_name, title, message, is_read)
+                                    VALUES (%s, %s, %s, %s, %s, FALSE)
+                                    ON CONFLICT DO NOTHING
+                                """, (
+                                    user_id,
+                                    "rain_alert",
+                                    city_name,
+                                    "Rain expected today",
+                                    f"{today['daily_chance_of_rain']}% chance of rain in {city_name}. Pack an umbrella."
+                                ))
+                                notifications_created += cursor.rowcount
+                            
+                            # Check for extreme heat (>35°C)
+                            if today["maxtemp_c"] > 35:
+                                cursor.execute("""
+                                    INSERT INTO weather_notifications 
+                                    (user_id, type, city_name, title, message, is_read)
+                                    VALUES (%s, %s, %s, %s, %s, FALSE)
+                                    ON CONFLICT DO NOTHING
+                                """, (
+                                    user_id,
+                                    "heat_alert",
+                                    city_name,
+                                    "Extreme heat warning",
+                                    f"Temperature in {city_name} will reach {today['maxtemp_c']}°C. Stay hydrated."
+                                ))
+                                notifications_created += cursor.rowcount
+                            
+                            # Check for extreme cold (<0°C)
+                            if today["mintemp_c"] < 0:
+                                cursor.execute("""
+                                    INSERT INTO weather_notifications 
+                                    (user_id, type, city_name, title, message, is_read)
+                                    VALUES (%s, %s, %s, %s, %s, FALSE)
+                                    ON CONFLICT DO NOTHING
+                                """, (
+                                    user_id,
+                                    "cold_alert",
+                                    city_name,
+                                    "Freezing warning",
+                                    f"Temperature in {city_name} will drop to {today['mintemp_c']}°C. Dress warmly."
+                                ))
+                                notifications_created += cursor.rowcount
+                            
+                        except Exception as e:
+                            logger.error(f"Failed to check weather for {city_name}: {e}")
+                            continue
+                    
+                    conn.commit()
+                finally:
+                    cursor.close()
                 
                 if notifications_created > 0:
                     logger.info(f"Notification check completed: {notifications_created} notifications created")
@@ -688,9 +688,11 @@ app = FastAPI(
 # ============================================================
 # CORS CONFIGURATION
 # ============================================================
+# Browsers send a preflight OPTIONS request for cross-origin requests with
+# credentials or non-simple headers (e.g. Content-Type: application/json).
+# Starlette's CORSMiddleware handles OPTIONS and response headers; avoid a
+# second custom OPTIONS layer that can disagree with it.
 
-# Build the allowed origins list from the env var (JSON array string) or
-# fall back to hard-coded defaults that always include the Vercel URL.
 _CORS_DEFAULT = [
     "http://localhost:5173",
     "http://localhost:3000",
@@ -698,28 +700,50 @@ _CORS_DEFAULT = [
 ]
 _ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
 try:
-    ALLOWED_ORIGINS_LIST: list[str] = json.loads(_ALLOWED_ORIGINS_RAW) if _ALLOWED_ORIGINS_RAW.strip().startswith("[") else (
-        [o.strip() for o in _ALLOWED_ORIGINS_RAW.split(",") if o.strip()] or _CORS_DEFAULT
+    ALLOWED_ORIGINS_LIST: list[str] = (
+        json.loads(_ALLOWED_ORIGINS_RAW)
+        if _ALLOWED_ORIGINS_RAW.strip().startswith("[")
+        else (
+            [o.strip() for o in _ALLOWED_ORIGINS_RAW.split(",") if o.strip()]
+            or _CORS_DEFAULT
+        )
     )
 except (json.JSONDecodeError, Exception):
-    ALLOWED_ORIGINS_LIST = _CORS_DEFAULT
+    ALLOWED_ORIGINS_LIST = list(_CORS_DEFAULT)
 
-# Always ensure the Vercel production URL is present even if the env var
-# was set incorrectly or is empty.
 _VERCEL_ORIGIN = "https://elexousia-weatherforecast-lovat.vercel.app"
 if _VERCEL_ORIGIN not in ALLOWED_ORIGINS_LIST:
     ALLOWED_ORIGINS_LIST.append(_VERCEL_ORIGIN)
 
-print(f"✅ CORS allowed origins: {ALLOWED_ORIGINS_LIST}")
+# Also allow any Vercel preview deployment (*.vercel.app) when using credentials,
+# without listing every preview URL explicitly.
+_DEFAULT_VERCEL_REGEX = r"https://[\w.-]+\.vercel\.app"
+_CORS_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX", _DEFAULT_VERCEL_REGEX).strip() or None
 
-# 1. CORSMiddleware — registered first → innermost (runs last in chain)
+_CORS_ALLOW_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "Origin",
+    "X-Requested-With",
+    "X-RateLimit-Limit",
+    "X-RateLimit-Window",
+    "Baggage",
+    "Sentry-Trace",
+]
+
+print(f"✅ CORS allowed origins: {ALLOWED_ORIGINS_LIST}")
+if _CORS_ORIGIN_REGEX:
+    print(f"✅ CORS allow_origin_regex: {_CORS_ORIGIN_REGEX}")
+
+# 1. CORSMiddleware — registered first → innermost (runs last on the request path)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS_LIST,
+    allow_origin_regex=_CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin",
-                   "X-Requested-With", "X-RateLimit-Limit", "X-RateLimit-Window"],
+    allow_headers=_CORS_ALLOW_HEADERS,
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Window"],
     max_age=600,
 )
@@ -731,34 +755,8 @@ app.add_middleware(
     session_cookie="elexousia_oauth_state",
 )
 
-# 3. Rate-limit middleware — registered second-to-last → second outermost
+# 3. Rate-limit middleware — must not block OPTIONS (handled in rate_limit.py)
 app.middleware("http")(rate_limit_middleware)
-
-
-# 4. Outermost OPTIONS preflight guard — registered LAST so it runs FIRST.
-# This guarantees browser preflights always get a proper 200+CORS response
-# before any other middleware (rate limiter, session, etc.) can interfere.
-@app.middleware("http")
-async def options_preflight_middleware(request: Request, call_next):
-    """Short-circuit all OPTIONS preflight requests with correct CORS headers."""
-    if request.method == "OPTIONS":
-        origin = request.headers.get("origin", "")
-        # Only respond with CORS headers for known origins
-        allow_origin = origin if origin in ALLOWED_ORIGINS_LIST else ""
-        if allow_origin:
-            from starlette.responses import Response as StarletteResponse
-            return StarletteResponse(
-                status_code=200,
-                headers={
-                    "Access-Control-Allow-Origin": allow_origin,
-                    "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS, PUT",
-                    "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, Origin, X-Requested-With",
-                    "Access-Control-Max-Age": "600",
-                    "Content-Length": "0",
-                },
-            )
-    return await call_next(request)
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
