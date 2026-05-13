@@ -22,6 +22,29 @@ logger = logging.getLogger(__name__)
 # Frontend URL for OAuth callbacks (use environment variable for flexibility)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+
+def _session_cookie_flags() -> tuple[bool, str]:
+    """
+    session_token must be sent on cross-origin fetch(..., credentials: 'include')
+    (e.g. Vercel UI calling Render API). SameSite=Lax blocks that; use None + Secure
+    whenever the frontend is not plain http://localhost (or 127.0.0.1).
+
+    Override with SESSION_COOKIE_SAMESITE=lax|strict|none and optional
+    SESSION_COOKIE_SECURE=false for special local setups.
+    """
+    override = os.getenv("SESSION_COOKIE_SAMESITE", "").strip().lower()
+    if override in ("none", "lax", "strict"):
+        secure = os.getenv("SESSION_COOKIE_SECURE", "true").strip().lower() != "false"
+        if override == "none":
+            secure = True
+        return secure, override
+
+    fe = FRONTEND_URL.strip()
+    if fe.startswith("http://localhost") or fe.startswith("http://127.0.0.1"):
+        return False, "lax"
+    return True, "none"
+
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -103,12 +126,13 @@ async def google_callback(request: Request):
         response = RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?success=true")
         
         # Set HTTP-only cookie
+        _secure, _samesite = _session_cookie_flags()
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,  # Set to True in production AND fALSE IN DEVELEOPMENT with HTTPS
-            samesite="lax",
+            secure=_secure,
+            samesite=_samesite,
             max_age=86400,  # 24 hours
             path="/"
         )
@@ -216,12 +240,13 @@ async def github_callback(request: Request):
         response = RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?success=true")
         
         # Set HTTP-only cookie
+        _secure, _samesite = _session_cookie_flags()
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,  # Set to True in production with HTTPS
-            samesite="lax",
+            secure=_secure,
+            samesite=_samesite,
             max_age=86400,  # 24 hours
             path="/"
         )
@@ -311,12 +336,14 @@ async def logout(
     if token:
         await UserRepository.delete_session(token)
     
-    # Clear the cookie
+    # Clear the cookie (match SameSite/Secure used when setting it)
+    _secure, _samesite = _session_cookie_flags()
     response.delete_cookie(
         key="session_token",
         path="/",
         httponly=True,
-        samesite="lax"
+        secure=_secure,
+        samesite=_samesite,
     )
     
     return LogoutResponse(
