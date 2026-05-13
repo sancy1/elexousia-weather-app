@@ -695,67 +695,89 @@ async def debug_headers(request: Request):
         "request_headers": dict(request.headers),
     }
 
+# # ============================================================
+# # CORS CONFIGURATION
+# # ============================================================
+# # Browsers send a preflight OPTIONS request for cross-origin requests with
+# # credentials or non-simple headers (e.g. Content-Type: application/json).
+# # Starlette's CORSMiddleware handles OPTIONS and response headers; avoid a
+# # second custom OPTIONS layer that can disagree with it.
+
+# _CORS_DEFAULT = [
+#     "http://localhost:5173",
+#     "http://localhost:3000",
+#     "https://elexousia-weatherforecast-lovat.vercel.app",
+# ]
+# _ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
+# try:
+#     ALLOWED_ORIGINS_LIST: list[str] = (
+#         json.loads(_ALLOWED_ORIGINS_RAW)
+#         if _ALLOWED_ORIGINS_RAW.strip().startswith("[")
+#         else (
+#             [o.strip() for o in _ALLOWED_ORIGINS_RAW.split(",") if o.strip()]
+#             or _CORS_DEFAULT
+#         )
+#     )
+# except (json.JSONDecodeError, Exception):
+#     ALLOWED_ORIGINS_LIST = list(_CORS_DEFAULT)
+
+# _VERCEL_ORIGIN = "https://elexousia-weatherforecast-lovat.vercel.app"
+# if _VERCEL_ORIGIN not in ALLOWED_ORIGINS_LIST:
+#     ALLOWED_ORIGINS_LIST.append(_VERCEL_ORIGIN)
+
+# # Also allow any Vercel preview deployment (*.vercel.app) when using credentials,
+# # without listing every preview URL explicitly.
+# _DEFAULT_VERCEL_REGEX = r"https://[\w.-]+\.vercel\.app"
+# _CORS_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX", _DEFAULT_VERCEL_REGEX).strip() or None
+
+# _CORS_ALLOW_HEADERS = [
+#     "Authorization",
+#     "Content-Type",
+#     "Accept",
+#     "Origin",
+#     "X-Requested-With",
+#     "X-RateLimit-Limit",
+#     "X-RateLimit-Window",
+#     "Baggage",
+#     "Sentry-Trace",
+# ]
+
+# print(f"✅ CORS allowed origins: {ALLOWED_ORIGINS_LIST}")
+# if _CORS_ORIGIN_REGEX:
+#     print(f"✅ CORS allow_origin_regex: {_CORS_ORIGIN_REGEX}")
+
+# # 1. CORSMiddleware — registered first → innermost (runs last on the request path)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=ALLOWED_ORIGINS_LIST,
+#     allow_origin_regex=_CORS_ORIGIN_REGEX,
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
+#     allow_headers=_CORS_ALLOW_HEADERS,
+#     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Window"],
+#     max_age=600,
+# )
+
+
+
 # ============================================================
-# CORS CONFIGURATION
+# CORS CONFIGURATION - USING SETTINGS FROM CONFIG.PY
 # ============================================================
-# Browsers send a preflight OPTIONS request for cross-origin requests with
-# credentials or non-simple headers (e.g. Content-Type: application/json).
-# Starlette's CORSMiddleware handles OPTIONS and response headers; avoid a
-# second custom OPTIONS layer that can disagree with it.
 
-_CORS_DEFAULT = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://elexousia-weatherforecast-lovat.vercel.app",
-]
-_ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
-try:
-    ALLOWED_ORIGINS_LIST: list[str] = (
-        json.loads(_ALLOWED_ORIGINS_RAW)
-        if _ALLOWED_ORIGINS_RAW.strip().startswith("[")
-        else (
-            [o.strip() for o in _ALLOWED_ORIGINS_RAW.split(",") if o.strip()]
-            or _CORS_DEFAULT
-        )
-    )
-except (json.JSONDecodeError, Exception):
-    ALLOWED_ORIGINS_LIST = list(_CORS_DEFAULT)
+from app.core.config import settings
 
-_VERCEL_ORIGIN = "https://elexousia-weatherforecast-lovat.vercel.app"
-if _VERCEL_ORIGIN not in ALLOWED_ORIGINS_LIST:
-    ALLOWED_ORIGINS_LIST.append(_VERCEL_ORIGIN)
+# Use the ALLOWED_ORIGINS from config.py (which reads from environment)
+ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 
-# Also allow any Vercel preview deployment (*.vercel.app) when using credentials,
-# without listing every preview URL explicitly.
-_DEFAULT_VERCEL_REGEX = r"https://[\w.-]+\.vercel\.app"
-_CORS_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX", _DEFAULT_VERCEL_REGEX).strip() or None
+print(f"🚀 CORS allowed origins: {ALLOWED_ORIGINS}")
 
-_CORS_ALLOW_HEADERS = [
-    "Authorization",
-    "Content-Type",
-    "Accept",
-    "Origin",
-    "X-Requested-With",
-    "X-RateLimit-Limit",
-    "X-RateLimit-Window",
-    "Baggage",
-    "Sentry-Trace",
-]
-
-print(f"✅ CORS allowed origins: {ALLOWED_ORIGINS_LIST}")
-if _CORS_ORIGIN_REGEX:
-    print(f"✅ CORS allow_origin_regex: {_CORS_ORIGIN_REGEX}")
-
-# 1. CORSMiddleware — registered first → innermost (runs last on the request path)
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS_LIST,
-    allow_origin_regex=_CORS_ORIGIN_REGEX,
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
-    allow_headers=_CORS_ALLOW_HEADERS,
-    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Window"],
-    max_age=600,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # 2. SessionMiddleware
