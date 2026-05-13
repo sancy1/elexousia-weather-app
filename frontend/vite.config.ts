@@ -13,7 +13,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        target: "https://elexousia-weather-backend.onrender.com",
+        target: "https://elexousia-weather-app-backend.onrender.com",
         changeOrigin: true,
       },
     },
@@ -61,7 +61,7 @@ export default defineConfig({
 //     port: 3000,
 //     proxy: {
 //       "/api": {
-//         target: "https://elexousia-weather-backend.onrender.com",
+//         target: "https://elexousia-weather-app-backend.onrender.com",
 //         changeOrigin: true,
 //       },
 //     },

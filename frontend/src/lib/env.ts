@@ -11,8 +11,13 @@ const getEnvVar = (key: string, defaultValue?: string): string => {
 
 export const env = {
   // API Configuration
-  // API_BASE_URL: getEnvVar("VITE_API_BASE_URL", "https://elexousia-weather-backend.onrender.com"),
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "",
+  // Local dev defaults to the API on localhost; production build falls back to Render.
+  API_BASE_URL:
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.DEV
+      ? "http://localhost:8000"
+      : "https://elexousia-weather-app-backend.onrender.com"),
 
   // OAuth Configuration
   GOOGLE_OAUTH_ENABLED: getEnvVar("VITE_GOOGLE_OAUTH_ENABLED", "true") === "true",
