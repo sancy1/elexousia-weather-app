@@ -500,8 +500,6 @@
 
 
 
-
-
 """
 FILE: backend/app/main.py
 Elexousia Weather API - Main Application
