@@ -166,10 +166,10 @@ async def check_notifications(request):
         async with get_db_connection() as conn:
             cursor = conn.cursor()
             
-            # Get all saved locations
+            # Same source as notification_checker_task in app.main (weather_saved_locations)
             cursor.execute("""
-                SELECT sl.id, sl.user_id, sl.city_name, sl.latitude, sl.longitude
-                FROM saved_locations sl
+                SELECT id, user_id, city_name, latitude, longitude
+                FROM weather_saved_locations
             """)
             
             locations = cursor.fetchall()

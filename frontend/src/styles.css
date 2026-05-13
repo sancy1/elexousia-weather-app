@@ -117,6 +117,11 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes neon-orbit {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 @keyframes typing-dot {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-4px); opacity: 1; }
@@ -126,6 +131,23 @@
 .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
 .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .animate-fade-in { animation: fade-in 0.5s ease-out both; }
+
+.login-promo-neon {
+  background: linear-gradient(
+    120deg,
+    oklch(0.68 0.2 248),
+    oklch(0.55 0.16 252),
+    oklch(0.62 0.14 235),
+    oklch(0.55 0.16 252),
+    oklch(0.68 0.2 248)
+  );
+  background-size: 240% 240%;
+  animation: neon-orbit 5s ease infinite;
+  box-shadow:
+    0 0 22px oklch(0.55 0.18 252 / 0.45),
+    0 0 48px oklch(0.68 0.18 248 / 0.25),
+    inset 0 0 20px oklch(0.99 0.01 250 / 0.06);
+}
 
 .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }

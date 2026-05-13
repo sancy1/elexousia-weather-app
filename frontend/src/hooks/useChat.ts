@@ -90,8 +90,13 @@ export function useChat() {
     }
   }, []);
 
+  const clearResolvedCity = useCallback(() => {
+    setResolvedCity(null);
+  }, []);
+
   return {
     resolvedCity,
+    clearResolvedCity,
     sendMessage,
     stopChat,
     isStreaming,

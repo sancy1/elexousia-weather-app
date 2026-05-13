@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LoginPromoModal } from "@/components/auth/LoginPromoModal";
 
 /**
  * NotFoundComponent
@@ -35,12 +36,8 @@ function NotFoundComponent() {
 function RootComponent() {
   return (
     <AuthProvider>
-      {/* Outlet renders the content of the current child route */}
       <Outlet />
-      
-      {/* Pro-tip: If you want the TanStack Router Devtools, 
-         you can import and add them here inside a conditional DEV check.
-      */}
+      <LoginPromoModal />
     </AuthProvider>
   );
 }
