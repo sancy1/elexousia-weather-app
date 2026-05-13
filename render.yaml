@@ -56,3 +56,5 @@ services:
         value: true
       - key: COOKIE_SAMESITE
         value: lax
+      - key: ALLOWED_ORIGINS
+        value: '["https://elexousia-weatherforecast-lovat.vercel.app","http://localhost:5173","http://localhost:3000"]'
