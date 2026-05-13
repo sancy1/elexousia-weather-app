@@ -69,16 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Logout user
-   */console.log("Logging out...");
-      
+   */
   const logout = async () => {
     try {
       await authApi.logout();
-      setUser(null)
-      console.error("Logout failed:", err);;
-      // Redirect to home
+      setUser(null);
       window.location.href = "/";
-    } catch (err) {
+    } catch (error) {
+      console.error("Logout failed:", error);
       setError("Failed to logout");
     }
   };

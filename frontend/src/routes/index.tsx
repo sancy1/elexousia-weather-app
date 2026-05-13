@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CloudSun, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { Sidebar } from "@/components/weather/Sidebar";
 import { TopBar } from "@/components/weather/TopBar";
@@ -66,14 +66,24 @@ function Index() {
   const { data: clothingData } = useClothingAdvice(city, true);
 
   // 3. Chat functionality
-  const { sendMessage, isStreaming, currentResponse, resolvedCity } = useChat();
+  const { sendMessage, isStreaming, currentResponse, resolvedCity, clearResolvedCity } = useChat();
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
+  const handleCitySelect = useCallback(
+    (next: string) => {
+      clearResolvedCity();
+      setCity(next);
+    },
+    [clearResolvedCity]
+  );
+
+  // Only react when the chat stream emits a *new* resolved_city. Including `city`
+  // in the dependency array caused this effect to re-run after sidebar / saved /
+  // search picks and overwrite the user's choice with a stale `resolvedCity`.
   useEffect(() => {
-    if (resolvedCity && resolvedCity !== city) {
-      setCity(resolvedCity);
-    }
-  }, [resolvedCity, city]);
+    if (!resolvedCity) return;
+    setCity((prev) => (resolvedCity !== prev ? resolvedCity : prev));
+  }, [resolvedCity]);
 
   const handleSend = async (text: string) => {
     const id = Date.now().toString();
@@ -132,7 +142,7 @@ function Index() {
       <Sidebar
         activeId={activeHistory}
         onSelect={setActiveHistory}
-        onCitySelect={setCity}
+        onCitySelect={handleCitySelect}
         mobileOpen={mobileNav}
         onMobileClose={() => setMobileNav(false)}
         currentCity={city}
