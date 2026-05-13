@@ -107,7 +107,7 @@ async def google_callback(request: Request):
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=True,  # Set to True in production AND fALSE IN DEVELEOPMENT with HTTPS
             samesite="lax",
             max_age=86400,  # 24 hours
             path="/"
@@ -220,7 +220,7 @@ async def github_callback(request: Request):
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=True,  # Set to True in production with HTTPS
             samesite="lax",
             max_age=86400,  # 24 hours
             path="/"
