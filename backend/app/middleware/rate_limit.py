@@ -120,12 +120,22 @@ RATE_LIMITS = {
 async def rate_limit_middleware(request: Request, call_next):
     """
     FastAPI middleware for rate limiting.
+
+    IMPORTANT: This middleware runs BEFORE CORSMiddleware processes the
+    response (due to FastAPI's reverse middleware stack order). To prevent
+    CORS errors when we short-circuit a request (e.g. return 429), we must
+    manually inject the required CORS headers into any response we generate.
     """
+    # ── Always pass OPTIONS preflight through untouched ──────────────────
+    # The CORS middleware handles OPTIONS; we must never block it here.
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     path = request.url.path
-    
+
     # Get rate limit config for this path
     config = RATE_LIMITS.get(path, RATE_LIMITS["default"])
-    
+
     # Check rate limit
     allowed = await rate_limiter.check_rate_limit(
         request,
@@ -133,22 +143,31 @@ async def rate_limit_middleware(request: Request, call_next):
         window_seconds=config["window"],
         limit_type=config["type"]
     )
-    
+
     if not allowed:
-        return JSONResponse(
+        # Build the 429 response and manually add CORS headers so the
+        # browser can read it instead of getting a opaque network error.
+        origin = request.headers.get("origin", "")
+        response = JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={
                 "detail": f"Rate limit exceeded: {config['limit']} requests per {config['window']} seconds",
                 "limit": config["limit"],
-                "window": config["window"]
-            }
+                "window": config["window"],
+            },
         )
-    
-    # Process request
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PATCH, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+    # Process request normally
     response = await call_next(request)
-    
-    # Add rate limit headers
+
+    # Add rate-limit informational headers
     response.headers["X-RateLimit-Limit"] = str(config["limit"])
     response.headers["X-RateLimit-Window"] = str(config["window"])
-    
+
     return response
