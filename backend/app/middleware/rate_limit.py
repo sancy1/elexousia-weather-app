@@ -27,19 +27,26 @@ class RateLimiter:
         self.lock = asyncio.Lock()
     
     def _get_key(self, request: Request, limit_type: str) -> str:
-        """Generate a unique key for rate limiting based on type."""
+        """Generate a unique key for rate limiting based on type.
+
+        request.client is typed as ``Address | None`` — it is None when the
+        connection comes from a non-TCP transport (e.g. test client, unix
+        socket).  We fall back to "unknown" so we never crash on a missing
+        client address.
+        """
+        client_host: str = request.client.host if request.client else "unknown"
+
         if limit_type == "user":
-            # For user-based limiting, use user_id if authenticated, else IP
+            # For user-based limiting, use token if authenticated, else IP
             auth_header = request.headers.get("Authorization")
             if auth_header and auth_header.startswith("Bearer "):
                 token = auth_header.replace("Bearer ", "")
                 return f"user:{token}"
-            return f"ip:{request.client.host}"
+            return f"ip:{client_host}"
         elif limit_type == "ip":
-            # For IP-based limiting
-            return f"ip:{request.client.host}"
+            return f"ip:{client_host}"
         else:
-            return f"ip:{request.client.host}"
+            return f"ip:{client_host}"
     
     def _clean_old_requests(self, key: str, window_seconds: int):
         """Remove requests older than the time window."""
