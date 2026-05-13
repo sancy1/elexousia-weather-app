@@ -686,48 +686,79 @@ app = FastAPI(
 )
 
 # ============================================================
-# CORS CONFIGURATION - UPDATED FOR VERCEL FRONTEND
+# CORS CONFIGURATION
 # ============================================================
 
-# Parse ALLOWED_ORIGINS from environment variable (supports JSON array)
-# Default includes local development URLs and Vercel production URL
-DEFAULT_ORIGINS = '["http://localhost:3000","http://localhost:5173","https://elexousia-weatherforecast-lovat.vercel.app"]'
-ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", DEFAULT_ORIGINS)
-
+# Build the allowed origins list from the env var (JSON array string) or
+# fall back to hard-coded defaults that always include the Vercel URL.
+_CORS_DEFAULT = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://elexousia-weatherforecast-lovat.vercel.app",
+]
+_ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
 try:
-    ALLOWED_ORIGINS_LIST = json.loads(ALLOWED_ORIGINS_ENV)
-    print(f"✅ CORS allowed origins: {ALLOWED_ORIGINS_LIST}")
-except json.JSONDecodeError as e:
-    print(f"⚠️ Failed to parse ALLOWED_ORIGINS: {e}. Using defaults.")
-    ALLOWED_ORIGINS_LIST = ["http://localhost:3000", "http://localhost:5173", "https://elexousia-weatherforecast-lovat.vercel.app"]
+    ALLOWED_ORIGINS_LIST: list[str] = json.loads(_ALLOWED_ORIGINS_RAW) if _ALLOWED_ORIGINS_RAW.strip().startswith("[") else (
+        [o.strip() for o in _ALLOWED_ORIGINS_RAW.split(",") if o.strip()] or _CORS_DEFAULT
+    )
+except (json.JSONDecodeError, Exception):
+    ALLOWED_ORIGINS_LIST = _CORS_DEFAULT
 
-# Add CORS middleware
-# Add CORS middleware - using settings from config.py
+# Always ensure the Vercel production URL is present even if the env var
+# was set incorrectly or is empty.
+_VERCEL_ORIGIN = "https://elexousia-weatherforecast-lovat.vercel.app"
+if _VERCEL_ORIGIN not in ALLOWED_ORIGINS_LIST:
+    ALLOWED_ORIGINS_LIST.append(_VERCEL_ORIGIN)
+
+print(f"✅ CORS allowed origins: {ALLOWED_ORIGINS_LIST}")
+
+# 1. CORSMiddleware — registered first → innermost (runs last in chain)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=ALLOWED_ORIGINS_LIST,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin",
+                   "X-Requested-With", "X-RateLimit-Limit", "X-RateLimit-Window"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Window"],
+    max_age=600,
 )
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=ALLOWED_ORIGINS_LIST,
-#     allow_credentials=True,
-#     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-#     allow_headers=["*"],
-# )
-
-# Add SessionMiddleware after CORS
+# 2. SessionMiddleware
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SECRET_KEY", "change_this_in_production"),
-    session_cookie="elexousia_oauth_state"
+    session_cookie="elexousia_oauth_state",
 )
 
-# Add rate limiting middleware
+# 3. Rate-limit middleware — registered second-to-last → second outermost
 app.middleware("http")(rate_limit_middleware)
+
+
+# 4. Outermost OPTIONS preflight guard — registered LAST so it runs FIRST.
+# This guarantees browser preflights always get a proper 200+CORS response
+# before any other middleware (rate limiter, session, etc.) can interfere.
+@app.middleware("http")
+async def options_preflight_middleware(request: Request, call_next):
+    """Short-circuit all OPTIONS preflight requests with correct CORS headers."""
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin", "")
+        # Only respond with CORS headers for known origins
+        allow_origin = origin if origin in ALLOWED_ORIGINS_LIST else ""
+        if allow_origin:
+            from starlette.responses import Response as StarletteResponse
+            return StarletteResponse(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": allow_origin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS, PUT",
+                    "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, Origin, X-Requested-With",
+                    "Access-Control-Max-Age": "600",
+                    "Content-Length": "0",
+                },
+            )
+    return await call_next(request)
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
