@@ -685,6 +685,16 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+
+@app.get("/debug/headers")
+async def debug_headers(request: Request):
+    """Debug endpoint to see what headers are being sent"""
+    return {
+        "cors_origins": ALLOWED_ORIGINS_LIST,
+        "request_origin": request.headers.get("origin"),
+        "request_headers": dict(request.headers),
+    }
+
 # ============================================================
 # CORS CONFIGURATION
 # ============================================================
