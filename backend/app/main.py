@@ -507,7 +507,7 @@ FILE: backend/app/main.py
 Elexousia Weather API - Main Application
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
