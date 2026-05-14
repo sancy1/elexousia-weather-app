@@ -139,13 +139,29 @@ async def get_weather_forecast(city: str, days: int = 3) -> str:
     Use for: tomorrow, this week, will it rain, travel planning.
     
     Args:
-        city: any city name.
-        days: 1 to 7 (default 3).
+        city: any city name (str).
+        days: number of days to forecast - must be integer 1 to 7 (default 3).
         
     Returns:
         JSON with daily high/low, conditions, rain chance, travel advice.
     """
-    days = max(1, min(7, int(days)))
+    # Explicit type validation and conversion
+    # Handle case where LLM sends days as string (shouldn't happen but adds robustness)
+    try:
+        if isinstance(days, str):
+            logger.warning(f"days parameter received as string '{days}', converting to int")
+            days_int = int(days)
+        else:
+            days_int = int(days)
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid days parameter: {days} - {e}")
+        return json.dumps({
+            "status": "error",
+            "message": f"Invalid forecast duration '{days}'. Please use a number between 1 and 7."
+        })
+    
+    # Clamp to valid range
+    days_int = max(1, min(7, days_int))
     
     loc = await resolve_city(city)
     if not loc:
@@ -158,7 +174,7 @@ async def get_weather_forecast(city: str, days: int = 3) -> str:
     lat, lon = float(loc["latitude"]), float(loc["longitude"])
     
     # Check cache
-    cached = await get_cache(city_id, lat, lon, "forecast", days=days)
+    cached = await get_cache(city_id, lat, lon, "forecast", days=days_int)
     if cached:
         return json.dumps({
             "status": "success",
@@ -168,7 +184,7 @@ async def get_weather_forecast(city: str, days: int = 3) -> str:
     
     # Fetch live data
     try:
-        raw = await fetch_forecast(lat, lon, days)
+        raw = await fetch_forecast(lat, lon, days_int)
     except Exception as e:
         logger.error(f"Failed to fetch forecast: {e}")
         return json.dumps({"status": "error", "message": str(e)})
@@ -196,7 +212,7 @@ async def get_weather_forecast(city: str, days: int = 3) -> str:
     result = {
         "city": location["name"],
         "country": location["country"],
-        "days_requested": days,
+        "days_requested": days_int,
         "forecast": daily,
         "travel_advice": build_travel_advice(daily),
         "resolved_city": location["name"],  # For auto-updating UI
@@ -218,11 +234,23 @@ async def compare_weather(city1: str, city2: str) -> str:
     Use when user mentions two cities or asks which is better for travel.
     
     Args:
-        city1, city2: any city names or descriptions.
+        city1: first city name (str).
+        city2: second city name (str).
         
     Returns:
         JSON with side-by-side comparison and recommendation.
     """
+    # Validate input parameters
+    if not city1 or not city2:
+        return json.dumps({
+            "status": "error",
+            "message": "Both city names are required to compare weather."
+        })
+    
+    # Ensure string types
+    city1 = str(city1).strip()
+    city2 = str(city2).strip()
+    
     loc1, loc2 = await resolve_city(city1), await resolve_city(city2)
     errors = []
     
@@ -242,7 +270,7 @@ async def compare_weather(city1: str, city2: str) -> str:
         r2 = await fetch_current(float(loc2["latitude"]), float(loc2["longitude"]))
     except Exception as e:
         logger.error(f"Failed to fetch comparison data: {e}")
-        return json.dumps({"status": "error", "message": str(e)})
+        return json.dumps({"status": "error", "message": f"Failed to fetch weather data: {str(e)}"})
     
     def extract(r):
         c = r["current"]
