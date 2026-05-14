@@ -430,7 +430,7 @@ class Settings(BaseSettings):
     
     # Gemini
     GOOGLE_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.5-flash-preview-04-17"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     
     # ── Embeddings ───────────────────────────────────────────
     EMBED_MODEL: str = "mxbai-embed-large"
