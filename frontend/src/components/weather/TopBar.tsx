@@ -43,9 +43,9 @@ export function TopBar({ city, unit, onUnit, onMenu, user }: Props) {
           ))}
         </div>
         <Notifications user={user} />
-        <button className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">   
+        {/* <button className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">   
           <Settings className="h-4 w-4" />
-        </button>
+        </button> */}
       </div>
     </header>
   );

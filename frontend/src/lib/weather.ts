@@ -213,6 +213,13 @@ export const weatherApi = {
   },
 
   /**
+   * Delete all notifications
+   */
+  async deleteAllNotifications(): Promise<{ message: string; deleted_count: number }> {
+    return apiClient.delete<{ message: string; deleted_count: number }>("/api/notifications/delete-all");
+  },
+
+  /**
    * Check for new notifications
    */
   async checkNotifications(): Promise<CheckNotificationsResponse> {
