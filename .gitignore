@@ -156,3 +156,5 @@ out/
 # Jupyter Notebook
 .ipynb_checkpoints/
 *.ipynb
+switch_model.py
+switch_model.sql
