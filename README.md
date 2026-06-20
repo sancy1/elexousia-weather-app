@@ -490,6 +490,7 @@ This project is proprietary software. All rights reserved.
 - Email:	alexander.s.cyril@gmail.com
 
 ---
+## 
 - SCREENSHOTS
   <img width="1917" height="872" alt="Elexousia" src="https://github.com/user-attachments/assets/baa2c48d-5301-49df-9af4-e3e3ea0b3ef5" />
   
@@ -513,7 +514,7 @@ This project is proprietary software. All rights reserved.
 
 <img width="1917" height="872" alt="Elexousia" src="https://github.com/user-attachments/assets/a78b50a3-aeaa-40a3-b4b4-b0462e6ca59d" />
 
-
+## 
 **Built by Alexander S. Cyril**
 
 
