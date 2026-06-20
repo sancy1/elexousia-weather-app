@@ -486,6 +486,8 @@ This project is proprietary software. All rights reserved.
 - Weather data provided by [WeatherAPI.com](https://www.weatherapi.com/)
 - AI capabilities powered by [LangChain](https://langchain.com/)
 - UI components inspired by modern design patterns
+- Live Demo:	[pingrobot-seven.vercel.app](https://elexousia-weatherforecast-lovat.vercel.app/)
+- Email:	alexander.s.cyril@gmail.com
 
 ---
 
