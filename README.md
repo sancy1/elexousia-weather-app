@@ -493,23 +493,23 @@ This project is proprietary software. All rights reserved.
 ## 
 - SCREENSHOTS
   <img width="1917" height="872" alt="Elexousia" src="https://github.com/user-attachments/assets/baa2c48d-5301-49df-9af4-e3e3ea0b3ef5" />
-  
+##
 <img width="1905" height="867" alt="1" src="https://github.com/user-attachments/assets/a9b5fbed-0864-4714-b94d-34654cf53c84" />
-
+##
 <img width="1431" height="555" alt="2" src="https://github.com/user-attachments/assets/660c7cbd-72fa-433c-b753-9f2a6046baab" />
-
+##
 <img width="1896" height="863" alt="3" src="https://github.com/user-attachments/assets/9fa44367-e72b-4845-842f-5f87fbb1e25b" />
-
+##
 <img width="1455" height="636" alt="4" src="https://github.com/user-attachments/assets/43a93caf-798a-4afd-88a6-c8c4e4bbec9f" />
-
+##
 <img width="1463" height="685" alt="5" src="https://github.com/user-attachments/assets/fd7aecf2-3324-40b0-88cb-50d0b19d3ddd" />
-
+##
 <img width="1456" height="617" alt="6" src="https://github.com/user-attachments/assets/3a7ae8be-54f8-4a7e-a4ea-64384d56d636" />
-
+##
 <img width="1473" height="688" alt="7" src="https://github.com/user-attachments/assets/25f19648-8fc4-48d1-8f72-8e44a1c32afd" />
-
+##
 <img width="1462" height="622" alt="8" src="https://github.com/user-attachments/assets/d6480e58-0daf-456c-bc7b-0b2cc9c2f4d0" />
-
+##
 <img width="1452" height="683" alt="9" src="https://github.com/user-attachments/assets/3c351a38-6188-4e88-a76f-85015b460fd2" />
 
 ## 
