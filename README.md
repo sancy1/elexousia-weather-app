@@ -512,8 +512,6 @@ This project is proprietary software. All rights reserved.
 
 <img width="1452" height="683" alt="9" src="https://github.com/user-attachments/assets/3c351a38-6188-4e88-a76f-85015b460fd2" />
 
-<img width="1917" height="872" alt="Elexousia" src="https://github.com/user-attachments/assets/a78b50a3-aeaa-40a3-b4b4-b0462e6ca59d" />
-
 ## 
 **Built by Alexander S. Cyril**
 
