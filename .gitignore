@@ -158,3 +158,5 @@ out/
 *.ipynb
 switch_model.py
 switch_model.sql
+
+!LICENSE.txt
