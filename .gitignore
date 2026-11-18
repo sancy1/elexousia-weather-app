@@ -160,3 +160,5 @@ switch_model.py
 switch_model.sql
 
 !LICENSE.txt
+# Hi AUDIT Agent local session/state files
+**/.hiaudit_colmad_session
