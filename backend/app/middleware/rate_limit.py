@@ -134,16 +134,24 @@ RATE_LIMITS = {
     "/api/weather/detail": {"limit": 100, "window": 60, "type": "ip"},
     "/api/weather/compare": {"limit": 100, "window": 60, "type": "ip"},
     "/api/weather/wear": {"limit": 100, "window": 60, "type": "ip"},
-    # Auth endpoints - 30 req/min per real client IP.
-    # OAuth initiation is just a redirect (low risk); callbacks are protected
-    # by single-use codes + state param, so 30/min is still brute-force safe
-    # while tolerating retries/shared NAT IPs.
-    "/api/auth/google": {"limit": 30, "window": 60, "type": "ip"},
+    # Auth callback endpoints - 30 req/min per real client IP.
+    # Callbacks are protected by single-use codes + state param, so 30/min
+    # is still brute-force safe while tolerating retries/shared NAT IPs.
+    # NOTE: /api/auth/google and /api/auth/github (initiation redirects) are
+    # exempt from rate limiting entirely - see _RATE_LIMIT_EXEMPT_PATHS.
     "/api/auth/google/callback": {"limit": 30, "window": 60, "type": "ip"},
-    "/api/auth/github": {"limit": 30, "window": 60, "type": "ip"},
     "/api/auth/github/callback": {"limit": 30, "window": 60, "type": "ip"},
     # Default - 200 req/min for all other routes
     "default": {"limit": 200, "window": 60, "type": "user"},
+}
+
+
+# Paths that bypass rate limiting entirely. OAuth initiation endpoints only
+# redirect to Google/GitHub - there is nothing to brute-force, and proxy
+# chains can make the client IP unreliable, so they must never 429 a login.
+_RATE_LIMIT_EXEMPT_PATHS = {
+    "/api/auth/google",
+    "/api/auth/github",
 }
 
 
@@ -162,6 +170,10 @@ async def rate_limit_middleware(request: Request, call_next):
         return await call_next(request)
 
     path = request.url.path
+
+    # Exempt paths (OAuth initiation redirects) skip rate limiting entirely
+    if path in _RATE_LIMIT_EXEMPT_PATHS:
+        return await call_next(request)
 
     # Get rate limit config for this path
     config = RATE_LIMITS.get(path, RATE_LIMITS["default"])
