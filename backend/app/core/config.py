@@ -364,6 +364,8 @@ class Settings(BaseSettings):
     # Optional JSON map of per-model extra request params, e.g.
     # {"openai/gpt-oss-120b": {"reasoning_effort": "low"}}
     GROQ_MODEL_KWARGS_JSON: str = ""
+    # Seconds a rate-limited Groq model sits out before being retried.
+    GROQ_MODEL_COOLDOWN_SECONDS: float = 60.0
 
     # Gemini
     GOOGLE_API_KEY: Optional[str] = None

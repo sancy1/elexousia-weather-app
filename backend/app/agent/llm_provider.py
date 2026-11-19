@@ -217,11 +217,16 @@ LLM provider factory for Ollama, Groq, Gemini
 Fixed: Gemini thought_signature support for tool/function calling
 """
 
+import time
 from typing import Optional
 from app.core.config import settings
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+class GroqAllModelsRateLimited(Exception):
+    """Raised when every model in the Groq fallback chain is in cooldown."""
 
 
 def get_llm():
@@ -366,14 +371,20 @@ def _get_groq_llm():
             for m in (settings.GROQ_FALLBACK_MODELS or "").split(",")
             if m.strip() and m.strip() != primary
         ]
-        chain = fallbacks  # models to try after the primary fails
-        all_models = [primary] + chain
+        all_models = [primary] + fallbacks
 
         class GroqFallbackChatGroq(ChatGroq):
-            """ChatGroq that fails over to backup models on retryable errors."""
+            """ChatGroq that rotates across models on retryable errors.
 
-            _fallback_chain: list = PrivateAttr(default_factory=list)
-            _chain_kwargs: dict = PrivateAttr(default_factory=dict)
+            A model that fails enters a cooldown; each request prefers the
+            earliest model in the chain whose cooldown has expired, so the
+            primary is retried automatically once its rate-limit window
+            resets instead of staying on a fallback until restart.
+            """
+
+            _model_chain: list = PrivateAttr(default_factory=list)
+            _cooldowns: dict = PrivateAttr(default_factory=dict)
+            _cooldown_secs: float = PrivateAttr(default=60.0)
 
             def _apply_model_params(self, model: str) -> None:
                 """Set explicit fields + model_kwargs for the given model."""
@@ -382,16 +393,39 @@ def _get_groq_llm():
                     setattr(self, k, v)
                 self.model_kwargs = extra
 
+            def _eligible_model(self) -> Optional[str]:
+                """Earliest chain model whose cooldown has expired."""
+                now = time.time()
+                for m in self._model_chain:
+                    if self._cooldowns.get(m, 0.0) <= now:
+                        return m
+                return None
+
+            def _prefer_best_model(self) -> None:
+                """Rotate back to the best available model before each call."""
+                best = self._eligible_model()
+                if best and best != self.model_name:
+                    logger.info(f"Groq rotating back to {best}")
+                    self.model_name = best
+                    self._apply_model_params(best)
+
             def _advance_model(self) -> bool:
-                if not self._fallback_chain:
-                    return False
-                nxt = self._fallback_chain.pop(0)
-                logger.warning(f"Groq model {self.model_name} failed; falling back to {nxt}")
-                self.model_name = nxt
-                self._apply_model_params(nxt)
+                """Cool down the current model and switch to the next eligible one."""
+                self._cooldowns[self.model_name] = time.time() + self._cooldown_secs
+                nxt = self._eligible_model()
+                if nxt is None:
+                    raise GroqAllModelsRateLimited(
+                        "The AI weather assistant is rate-limited on all available "
+                        "models right now. Please try again in about a minute."
+                    )
+                if nxt != self.model_name:
+                    logger.warning(f"Groq model {self.model_name} failed; falling back to {nxt}")
+                    self.model_name = nxt
+                    self._apply_model_params(nxt)
                 return True
 
             def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+                self._prefer_best_model()
                 while True:
                     try:
                         return super()._generate(
@@ -403,6 +437,7 @@ def _get_groq_llm():
                         raise
 
             async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+                self._prefer_best_model()
                 while True:
                     try:
                         return await super()._agenerate(
@@ -420,7 +455,8 @@ def _get_groq_llm():
             temperature=0.7,
         )
         llm._apply_model_params(primary)
-        llm._fallback_chain = list(chain)
+        llm._model_chain = list(all_models)
+        llm._cooldown_secs = float(getattr(settings, "GROQ_MODEL_COOLDOWN_SECONDS", 60.0) or 60.0)
 
         logger.info(f"Initialized Groq LLM with fallback chain: {' -> '.join(all_models)}")
         return llm
