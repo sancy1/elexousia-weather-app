@@ -118,7 +118,13 @@ Optional (for Docker deployment):
 4. **Install dependencies:**
 
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements/base.txt
+   ```
+
+   For development extras (tests, linters):
+
+   ```bash
+   pip install -r requirements/dev.txt
    ```
 
 5. **Set up the database:**
@@ -148,7 +154,7 @@ Optional (for Docker deployment):
 
 3. **Configure environment variables:**
    - Copy `.env.example` to `.env`
-   - Set `VITE_API_URL` to your backend URL
+   - In dev mode the API client defaults to `http://localhost:8000`; set `VITE_API_BASE_URL` only if your backend runs elsewhere
 
 ### Option 2: Docker Deployment
 
@@ -184,6 +190,24 @@ DATABASE_URL=postgresql://user:password@localhost:5432/elexousia_weather
 # Weather API
 WEATHER_API_KEY=your_weatherapi_key_here
 
+# LLM Provider (ollama | groq | gemini)
+LLM_PROVIDER=groq
+
+# Ollama (local, free)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+
+# Groq (cloud, OpenAI-compatible)
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_BASE_URL=https://api.groq.com
+GROQ_MODEL=openai/gpt-oss-120b
+GROQ_PRIMARY_MODEL=openai/gpt-oss-120b
+GROQ_FALLBACK_MODELS=openai/gpt-oss-20b,qwen/qwen3.8-27b
+
+# Gemini (alternative cloud provider)
+GOOGLE_API_KEY=your_google_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+
 # OAuth (Google)
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
@@ -200,8 +224,16 @@ ALLOWED_ORIGINS=http://localhost:8080,http://localhost:5173
 ### Frontend (.env)
 
 ```env
-VITE_API_URL=http://localhost:8000
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
+# API base URL (optional in dev — defaults to http://localhost:8000)
+VITE_API_BASE_URL=http://localhost:8000
+
+# OAuth feature flags
+VITE_GOOGLE_OAUTH_ENABLED=true
+VITE_GITHUB_OAUTH_ENABLED=true
+
+# Feature flags
+VITE_ENABLE_IDE_MODE=false
+VITE_ENABLE_AGENT_MODE=false
 ```
 
 ## Running the Application
@@ -238,11 +270,11 @@ cd frontend
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:8080`
+The frontend will be available at `http://localhost:3000`
 
 #### Access the Application
 
-Open your browser and navigate to `http://localhost:8080`
+Open your browser and navigate to `http://localhost:3000`
 
 ### Docker Deployment
 
@@ -250,7 +282,7 @@ Open your browser and navigate to `http://localhost:8080`
 docker-compose up -d
 ```
 
-The application will be available at `http://localhost:8080`
+The application will be available at `http://localhost:3000`
 
 ## API Documentation
 
@@ -299,6 +331,7 @@ Once the backend is running, access the interactive API documentation:
 - **Lucide React** - Icons
 - **TanStack Query** - Data fetching
 - **React Router** - Routing
+- **ReactMarkdown** - Markdown rendering for AI chat responses
 
 ### Backend
 
@@ -308,6 +341,7 @@ Once the backend is running, access the interactive API documentation:
 - **Psycopg2** - Database adapter
 - **LangChain** - AI framework for LLM orchestration
 - **LangGraph** - Agent workflow orchestration
+- **Groq / Ollama / Gemini** - Pluggable LLM providers (switch via `LLM_PROVIDER`)
 - **RAG** - Retrieval-Augmented Generation for context-aware responses
 - **Pydantic** - Data validation
 - **Uvicorn** - ASGI server
@@ -330,7 +364,7 @@ elexousia-weather/
 │   │   ├── infrastructure/ # Database & external services
 │   │   └── main.py         # Application entry point
 │   ├── migrations/         # Database migrations
-│   └── requirements.txt    # Python dependencies
+│   ├── requirements/       # Python dependencies (base/dev/prod)
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/     # React components
@@ -409,6 +443,12 @@ Render provides a simple way to deploy the backend from GitHub with managed infr
    ```env
    DATABASE_URL=postgresql://user:password@your-db-host:5432/elexousia_weather
    WEATHER_API_KEY=your_weatherapi_key_here
+   LLM_PROVIDER=groq
+   GROQ_API_KEY=your_groq_api_key_here
+   GROQ_BASE_URL=https://api.groq.com
+   GROQ_MODEL=openai/gpt-oss-120b
+   GROQ_PRIMARY_MODEL=openai/gpt-oss-120b
+   GROQ_FALLBACK_MODELS=openai/gpt-oss-20b,qwen/qwen3.8-27b
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
    GOOGLE_REDIRECT_URI=https://your-app.onrender.com/auth/callback
@@ -627,8 +667,6 @@ See the [LICENSE](./LICENSE) file for details.
 - UI components inspired by modern design patterns
 
 - Live Demo: https://elexousia-weatherforecast-lovat.vercel.app
-- # Email: alexander.s.cyril@gmail.com
-- Live Demo: https://elexousia-weatherforecast-lovat.vercel.app
 - Email: alexander.s.cyril@gmail.com
 
 ---
@@ -659,34 +697,3 @@ See the [LICENSE](./LICENSE) file for details.
 ##
 
 **Built by Alexander S. Cyril**
-
-# <<<<<<< HEAD
-
-##
-
-- SCREENSHOTS
-  <img width="1917" height="872" alt="Elexousia" src="https://github.com/user-attachments/assets/baa2c48d-5301-49df-9af4-e3e3ea0b3ef5" />
-  |->
-  <img width="1905" height="867" alt="1" src="https://github.com/user-attachments/assets/a9b5fbed-0864-4714-b94d-34654cf53c84" />
-  |->
-  <img width="1431" height="555" alt="2" src="https://github.com/user-attachments/assets/660c7cbd-72fa-433c-b753-9f2a6046baab" />
-  |->
-  <img width="1896" height="863" alt="3" src="https://github.com/user-attachments/assets/9fa44367-e72b-4845-842f-5f87fbb1e25b" />
-  |->
-  <img width="1455" height="636" alt="4" src="https://github.com/user-attachments/assets/43a93caf-798a-4afd-88a6-c8c4e4bbec9f" />
-  |->
-  <img width="1463" height="685" alt="5" src="https://github.com/user-attachments/assets/fd7aecf2-3324-40b0-88cb-50d0b19d3ddd" />
-  |->
-  <img width="1456" height="617" alt="6" src="https://github.com/user-attachments/assets/3a7ae8be-54f8-4a7e-a4ea-64384d56d636" />
-  |->
-  <img width="1473" height="688" alt="7" src="https://github.com/user-attachments/assets/25f19648-8fc4-48d1-8f72-8e44a1c32afd" />
-  |->
-  <img width="1462" height="622" alt="8" src="https://github.com/user-attachments/assets/d6480e58-0daf-456c-bc7b-0b2cc9c2f4d0" />
-  |->
-  <img width="1452" height="683" alt="9" src="https://github.com/user-attachments/assets/3c351a38-6188-4e88-a76f-85015b460fd2" />
-
-##
-
-**Built by Alexander Sanchez CYRIL**
-
-> > > > > > > b21a3c0 (docs: add security audit scope, disclaimer, and license reference)
