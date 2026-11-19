@@ -29,7 +29,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=https://elexousia-weather-app-backend.onrender.com
+      - VITE_API_URL=https://elexousia-weather-app-backend-oyzt.onrender.com
     depends_on:
       - backend
     restart: always

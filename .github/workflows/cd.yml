@@ -24,4 +24,4 @@ jobs:
       - name: Deployment notification
         run: |
           echo "✅ Docker build successful - Render will auto-deploy from main branch"
-          echo "🚀 Deployment URL: https://elexousia-weather-app-backend.onrender.com"
+          echo "🚀 Deployment URL: https://elexousia-weather-app-backend-oyzt.onrender.com"

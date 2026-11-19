@@ -37,7 +37,7 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        value: https://elexousia-weather-app-backend.onrender.com/auth/callback
+        value: https://elexousia-weather-app-backend-oyzt.onrender.com/auth/callback
       - key: OLLAMA_BASE_URL
         value: http://localhost:11434
       - key: OLLAMA_MODEL
