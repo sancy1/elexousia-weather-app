@@ -386,7 +386,8 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: Optional[str] = None
 
     # ── Security ─────────────────────────────────────────────
-    SECRET_KEY: str = "change_this_in_production"
+    # No default: main.py fails fast in production if this is unset/weak.
+    SECRET_KEY: str = ""
     SESSION_EXPIRY_DAYS: int = 1
 
     # ── Rate Limiting ────────────────────────────────────────

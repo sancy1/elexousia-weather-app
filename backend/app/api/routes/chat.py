@@ -3,14 +3,16 @@ FILE: backend/app/api/routes/chat.py
 AI Chat endpoint with SSE streaming
 """
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import json
 import asyncio
 
 from app.agent.weather_agent import get_agent
+from app.api.dependencies import get_current_user
+from app.infrastructure.database.models import WeatherUser
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -19,7 +21,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = None
     city_context: Optional[str] = None
     unit: str = "C"
@@ -30,19 +32,20 @@ _active_sessions: dict = {}
 
 
 @router.post("")
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, user: WeatherUser = Depends(get_current_user)):
     """
-    Send message to agent, stream response via SSE
+    Send message to agent, stream response via SSE.
+    Requires authentication to prevent anonymous LLM cost abuse.
     """
     agent = get_agent()
-    
+
     async def event_generator():
         try:
             async for event in agent.run_query(
                 message=request.message,
                 session_id=request.session_id,
                 city_context=request.city_context,
-                unit=request.unit
+                unit=request.unit,
             ):
                 # Format as SSE event
                 yield f"data: {json.dumps(event)}\n\n"
@@ -50,15 +53,15 @@ async def chat(request: ChatRequest):
             logger.error(f"Chat streaming error: {e}")
             error_event = {"type": "error", "detail": str(e)}
             yield f"data: {json.dumps(error_event)}\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

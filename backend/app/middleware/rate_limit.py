@@ -43,11 +43,15 @@ class RateLimiter:
             client_host = request.client.host if request.client else "unknown"
 
         if limit_type == "user":
-            # For user-based limiting, use token if authenticated, else IP
+            # For user-based limiting, use token if authenticated, else IP.
+            # Frontend authenticates via HttpOnly cookie; API clients may use Bearer.
             auth_header = request.headers.get("Authorization")
             if auth_header and auth_header.startswith("Bearer "):
                 token = auth_header.replace("Bearer ", "")
                 return f"user:{token}"
+            cookie_token = request.cookies.get("session_token")
+            if cookie_token:
+                return f"user:{cookie_token}"
             return f"ip:{client_host}"
         elif limit_type == "ip":
             return f"ip:{client_host}"
