@@ -11,6 +11,7 @@ from app.agent.tools.city_resolver import resolve_city
 from app.infrastructure.external.weather_api import fetch_current, fetch_forecast
 from app.infrastructure.repositories.weather_repository import save_cache, get_cache
 from app.core.logging_config import get_logger
+from app.middleware.rate_limit import get_client_ip
 
 logger = get_logger(__name__)
 
@@ -117,13 +118,9 @@ async def get_auto_weather(request: Request):
     Auto-detect location from IP and return current weather + 7-day forecast
     """
     # Get client IP - behind Render/Cloudflare the direct peer is the proxy,
-    # so prefer the first X-Forwarded-For entry (the real client IP)
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        ip = forwarded.split(",")[0].strip()
-    else:
-        ip = request.client.host if request.client else None
-    if not ip:
+    # so resolve the real client IP from proxy headers
+    ip = get_client_ip(request)
+    if not ip or ip == "unknown":
         raise HTTPException(status_code=400, detail="Could not determine IP address")
 
     # Detect location from IP (with fallback for local development)

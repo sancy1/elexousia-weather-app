@@ -15,6 +15,28 @@ from app.core.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def get_client_ip(request: Request) -> str:
+    """
+    Resolve the real client IP behind Render/Cloudflare proxies.
+
+    Priority:
+    1. CF-Connecting-IP (set by Cloudflare to the true client)
+    2. X-Real-IP (set by many proxies)
+    3. First X-Forwarded-For entry
+    4. request.client.host (direct peer — proxy IP when behind a proxy)
+    """
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip.strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 class RateLimiter:
     """
     In-memory rate limiter using sliding window algorithm.
@@ -34,13 +56,7 @@ class RateLimiter:
         socket).  We fall back to "unknown" so we never crash on a missing
         client address.
         """
-        # Behind Render/Cloudflare the direct peer is the proxy, so prefer the
-        # first X-Forwarded-For entry (the real client IP) when present.
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            client_host = forwarded.split(",")[0].strip()
-        else:
-            client_host = request.client.host if request.client else "unknown"
+        client_host = get_client_ip(request)
 
         if limit_type == "user":
             # For user-based limiting, use token if authenticated, else IP.
@@ -118,11 +134,14 @@ RATE_LIMITS = {
     "/api/weather/detail": {"limit": 100, "window": 60, "type": "ip"},
     "/api/weather/compare": {"limit": 100, "window": 60, "type": "ip"},
     "/api/weather/wear": {"limit": 100, "window": 60, "type": "ip"},
-    # Auth endpoints - 10 req/min (prevent brute force)
-    "/api/auth/google": {"limit": 10, "window": 60, "type": "ip"},
-    "/api/auth/google/callback": {"limit": 10, "window": 60, "type": "ip"},
-    "/api/auth/github": {"limit": 10, "window": 60, "type": "ip"},
-    "/api/auth/github/callback": {"limit": 10, "window": 60, "type": "ip"},
+    # Auth endpoints - 30 req/min per real client IP.
+    # OAuth initiation is just a redirect (low risk); callbacks are protected
+    # by single-use codes + state param, so 30/min is still brute-force safe
+    # while tolerating retries/shared NAT IPs.
+    "/api/auth/google": {"limit": 30, "window": 60, "type": "ip"},
+    "/api/auth/google/callback": {"limit": 30, "window": 60, "type": "ip"},
+    "/api/auth/github": {"limit": 30, "window": 60, "type": "ip"},
+    "/api/auth/github/callback": {"limit": 30, "window": 60, "type": "ip"},
     # Default - 200 req/min for all other routes
     "default": {"limit": 200, "window": 60, "type": "user"},
 }
@@ -169,6 +188,7 @@ async def rate_limit_middleware(request: Request, call_next):
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PATCH, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Retry-After"] = str(config["window"])
         return response
 
     # Process request normally
