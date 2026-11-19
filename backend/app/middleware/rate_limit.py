@@ -190,9 +190,10 @@ async def rate_limit_middleware(request: Request, call_next):
         response = JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={
-                "detail": f"Rate limit exceeded: {config['limit']} requests per {config['window']} seconds",
+                "detail": f"Rate limit exceeded on {path}: {config['limit']} requests per {config['window']} seconds",
                 "limit": config["limit"],
                 "window": config["window"],
+                "path": path,
             },
         )
         if origin:
