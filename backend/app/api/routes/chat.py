@@ -11,7 +11,7 @@ import json
 import asyncio
 
 from app.agent.weather_agent import get_agent
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_optional_user
 from app.infrastructure.database.models import WeatherUser
 from app.core.logging_config import get_logger
 
@@ -32,10 +32,10 @@ _active_sessions: dict = {}
 
 
 @router.post("")
-async def chat(request: ChatRequest, user: WeatherUser = Depends(get_current_user)):
+async def chat(request: ChatRequest, user: Optional[WeatherUser] = Depends(get_optional_user)):
     """
     Send message to agent, stream response via SSE.
-    Requires authentication to prevent anonymous LLM cost abuse.
+    Guests may chat (rate-limited per IP); authenticated users get per-user limits.
     """
     agent = get_agent()
 
