@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Mic, Paperclip } from "lucide-react";
 import { quickChips as fallbackChips } from "./data";
+import { env } from "@/lib/env";
 
 interface Props {
   onSend: (text: string) => void;
@@ -28,7 +29,7 @@ export function PromptBar({ onSend, isStreaming, currentCity }: Props) {
     let mounted = true;
     const fetchChips = async () => {
       try {
-        const res = await fetch('/api/chips');
+        const res = await fetch(`${env.API_BASE_URL}/api/chips`);
         if (!res.ok) throw new Error('Failed to fetch chips');
         const data = await res.json();
         if (mounted && data && Array.isArray(data.chips)) setChips(data.chips);

@@ -94,14 +94,25 @@ function Index() {
     setMessages((m) => [...m, { id: agentId, role: "agent", text: "", time: "now" }]);
     
     try {
-      await sendMessage(text, undefined, city, unit);
+      const finalText = await sendMessage(text, undefined, city, unit);
+      const displayText = finalText && finalText.trim()
+        ? finalText
+        : "I'm sorry, I didn't receive a response from the weather agent. Please try asking again — for example, 'What's the weather in London?'";
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === agentId ? { ...msg, text: displayText } : msg
+        )
+      );
       setStreamingMessageId(null);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((m) => [
-        ...m,
-        { id: Date.now().toString(), role: "agent", text: "Sorry, I encountered an error. Please try again.", time: "now" },
-      ]);
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === agentId
+            ? { ...msg, text: "Sorry, I encountered an error. Please try again." }
+            : msg
+        )
+      );
       setStreamingMessageId(null);
     }
   };

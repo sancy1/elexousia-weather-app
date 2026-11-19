@@ -63,6 +63,7 @@ export function useChat() {
   const [resolvedCity, setResolvedCity] = useState<string | null>(null);
   const [currentResponse, setCurrentResponse] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
+  const responseRef = useRef("");
 
   const sendMessage = useCallback(
     async (message: string, sessionId?: string, cityContext?: string, unit: string = "C") => {
@@ -73,6 +74,7 @@ export function useChat() {
 
       setIsStreaming(true);
       setCurrentResponse("");
+      responseRef.current = "";
       abortControllerRef.current = new AbortController();
 
       try {
@@ -98,13 +100,16 @@ export function useChat() {
                 if (event.type === "resolved_city" && event.city) {
                   setResolvedCity(event.city);
                 } else if (event.type === "token" && event.content) {
-                  setCurrentResponse((prev) => prev + sanitizeText(event.content || ""));
+                  const sanitized = sanitizeText(event.content || "");
+                  responseRef.current += sanitized;
+                  setCurrentResponse(responseRef.current);
                 } else if (event.type === "done") {
                   setIsStreaming(false);
                 } else if (event.type === "error") {
                   console.error("Chat error:", event.detail);
                   const friendlyMessage = formatErrorMessage(sanitizeText(event.detail || "Unknown error"));
-                  setCurrentResponse((prev) => prev + `\n\n${friendlyMessage}`);
+                  responseRef.current += `\n\n${friendlyMessage}`;
+                  setCurrentResponse(responseRef.current);
                   setIsStreaming(false);
                 }
               } catch (e) {
@@ -116,14 +121,16 @@ export function useChat() {
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           console.error("Chat streaming error:", error);
-          setCurrentResponse("Sorry, I encountered an error. Please try again.");
+          const fallback = "Sorry, I encountered an error. Please try again.";
+          responseRef.current = fallback;
+          setCurrentResponse(fallback);
         }
       } finally {
         setIsStreaming(false);
         abortControllerRef.current = null;
       }
 
-      return currentResponse;
+      return responseRef.current;
     },
     []
   );
