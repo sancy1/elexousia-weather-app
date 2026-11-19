@@ -52,6 +52,8 @@ function sanitizeText(s: string): string {
   out = out.replace(/```[a-zA-Z0-9_-]*\n?/g, "");
   // Remove any remaining triple backticks
   out = out.replace(/```/g, "");
+  // Normalize unicode spaces (narrow no-break U+202F, no-break U+00A0) to regular spaces
+  out = out.replace(/[  ]/g, " ");
   // Trim extra whitespace
   return out.trim();
 }

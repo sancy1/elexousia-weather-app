@@ -45,4 +45,14 @@ When responding:
 5. If you don't know a city, ask for clarification
 6. Always use the correct tool parameter types (days as INT, not string)
 
+Response formatting (IMPORTANT — the UI renders Markdown):
+- Use **bold** for key figures (temperature, condition, rain chance)
+- Use short bullet lists (- item) for details and advice; keep each bullet to one line
+- Use ### headings only for major sections; prefer bold labels over headings for small groups
+- Use a Markdown table ONLY for multi-day forecasts or city comparisons — keep columns few (Date, High/Low, Condition, Rain %) and cells short
+- For simple current-weather answers, prefer 4-6 bullets over a table
+- Never use code fences, HTML tags, or emoji-heavy formatting
+- Use regular spaces only — no special unicode spaces or symbols
+- Keep the whole answer under ~250 words unless the user asks for detail
+
 Remember: Tool parameter validation is strict. Incorrect types will cause tool failures."""

@@ -1,4 +1,4 @@
-# """
+﻿# """
 # FILE: backend/app/agent/llm_provider.py
 # LLM provider factory for Ollama, Groq, Gemini
 # """
@@ -13,12 +13,12 @@
 # def get_llm():
 #     """
 #     Factory function to get the configured LLM based on LLM_PROVIDER env var.
-    
+
 #     Returns:
 #         Configured LLM instance for use with LangGraph
 #     """
 #     provider = settings.LLM_PROVIDER.lower()
-    
+
 #     if provider == "ollama":
 #         return _get_ollama_llm()
 #     elif provider == "groq":
@@ -34,17 +34,17 @@
 #     """Get Ollama LLM instance."""
 #     try:
 #         from langchain_ollama import ChatOllama
-        
+
 #         llm = ChatOllama(
 #             model=settings.OLLAMA_MODEL,
 #             base_url=settings.OLLAMA_BASE_URL,
 #             temperature=0.7,
 #             num_ctx=4096,
 #         )
-        
+
 #         logger.info(f"Initialized Ollama LLM: {settings.OLLAMA_MODEL}")
 #         return llm
-        
+
 #     except ImportError as e:
 #         logger.error(f"Failed to import langchain_ollama: {e}")
 #         raise ImportError("langchain_ollama is required for Ollama provider. Install with: pip install langchain-ollama")
@@ -57,19 +57,19 @@
 #     """Get Groq LLM instance."""
 #     try:
 #         from langchain_groq import ChatGroq
-        
+
 #         if not hasattr(settings, 'GROQ_API_KEY') or not settings.GROQ_API_KEY:
 #             raise ValueError("GROQ_API_KEY not configured in environment variables")
-        
+
 #         llm = ChatGroq(
 #             api_key=settings.GROQ_API_KEY,
 #             model="llama-3.3-70b-versatile",
 #             temperature=0.7,
 #         )
-        
+
 #         logger.info("Initialized Groq LLM: llama-3.3-70b-versatile")
 #         return llm
-        
+
 #     except ImportError as e:
 #         logger.error(f"Failed to import langchain_groq: {e}")
 #         raise ImportError("langchain_groq is required for Groq provider. Install with: pip install langchain-groq")
@@ -82,19 +82,19 @@
 #     """Get Google Gemini LLM instance."""
 #     try:
 #         from langchain_google_genai import ChatGoogleGenerativeAI
-        
+
 #         if not hasattr(settings, 'GEMINI_API_KEY') or not settings.GEMINI_API_KEY:
 #             raise ValueError("GEMINI_API_KEY not configured in environment variables")
-        
+
 #         llm = ChatGoogleGenerativeAI(
 #             api_key=settings.GEMINI_API_KEY,
 #             model="gemini-pro",
 #             temperature=0.7,
 #         )
-        
+
 #         logger.info("Initialized Gemini LLM: gemini-pro")
 #         return llm
-        
+
 #     except ImportError as e:
 #         logger.error(f"Failed to import langchain_google_genai: {e}")
 #         raise ImportError("langchain-google-genai is required for Gemini provider. Install with: pip install langchain-google-genai")
@@ -103,30 +103,7 @@
 #         raise
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # =====================================================================================================
-
-
-
-
-
-
-
-
-
 
 
 # """
@@ -144,12 +121,12 @@
 # def get_llm():
 #     """
 #     Factory function to get the configured LLM based on LLM_PROVIDER env var.
-    
+
 #     Returns:
 #         Configured LLM instance for use with LangGraph
 #     """
 #     provider = settings.LLM_PROVIDER.lower()
-    
+
 #     if provider == "ollama":
 #         return _get_ollama_llm()
 #     elif provider == "groq":
@@ -165,17 +142,17 @@
 #     """Get Ollama LLM instance."""
 #     try:
 #         from langchain_ollama import ChatOllama
-        
+
 #         llm = ChatOllama(
 #             model=settings.OLLAMA_MODEL,
 #             base_url=settings.OLLAMA_BASE_URL,
 #             temperature=0.7,
 #             num_ctx=4096,
 #         )
-        
+
 #         logger.info(f"Initialized Ollama LLM: {settings.OLLAMA_MODEL}")
 #         return llm
-        
+
 #     except ImportError as e:
 #         logger.error(f"Failed to import langchain_ollama: {e}")
 #         raise ImportError("langchain_ollama is required for Ollama provider. Install with: pip install langchain-ollama")
@@ -188,19 +165,19 @@
 #     """Get Groq LLM instance."""
 #     try:
 #         from langchain_groq import ChatGroq
-        
+
 #         if not settings.GROQ_API_KEY:
 #             raise ValueError("GROQ_API_KEY not configured in environment variables")
-        
+
 #         llm = ChatGroq(
 #             api_key=settings.GROQ_API_KEY,
 #             model=settings.GROQ_MODEL,
 #             temperature=0.7,
 #         )
-        
+
 #         logger.info(f"Initialized Groq LLM: {settings.GROQ_MODEL}")
 #         return llm
-        
+
 #     except ImportError as e:
 #         logger.error(f"Failed to import langchain_groq: {e}")
 #         raise ImportError("langchain_groq is required for Groq provider. Install with: pip install langchain-groq")
@@ -213,65 +190,25 @@
 #     """Get Google Gemini LLM instance."""
 #     try:
 #         from langchain_google_genai import ChatGoogleGenerativeAI
-        
+
 #         if not settings.GOOGLE_API_KEY:
 #             raise ValueError("GOOGLE_API_KEY not configured in environment variables")
-        
+
 #         llm = ChatGoogleGenerativeAI(
 #             api_key=settings.GOOGLE_API_KEY,
 #             model=settings.GEMINI_MODEL,
 #             temperature=0.7,
 #         )
-        
+
 #         logger.info(f"Initialized Gemini LLM: {settings.GEMINI_MODEL}")
 #         return llm
-        
+
 #     except ImportError as e:
 #         logger.error(f"Failed to import langchain_google_genai: {e}")
 #         raise ImportError("langchain-google-genai is required for Gemini provider. Install with: pip install langchain-google-genai")
 #     except Exception as e:
 #         logger.error(f"Failed to initialize Gemini LLM: {e}")
 #         raise
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 """
@@ -307,7 +244,8 @@ def get_llm():
         return _get_ollama_llm()
 
 
-# ── OLLAMA ────────────────────────────────────────────────────────────────────
+# â”€â”€ OLLAMA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 def _get_ollama_llm():
     """Get Ollama LLM instance."""
@@ -335,39 +273,169 @@ def _get_ollama_llm():
         raise
 
 
-# ── GROQ ──────────────────────────────────────────────────────────────────────
+# â”€â”€ GROQ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+# Per-model request params tuned for GroqCloud free-tier limits.
+# gpt-oss models: low reasoning effort keeps latency/TPM low.
+# qwen3: reasoning disabled for tool-calling speed.
+# NOTE: never send both `include_reasoning` and `reasoning_format` â€” Groq
+# treats them as mutually exclusive and returns HTTP 400.
+_DEFAULT_GROQ_MODEL_KWARGS: dict = {
+    "openai/gpt-oss-120b": {"reasoning_effort": "low"},
+    "openai/gpt-oss-20b": {"reasoning_effort": "low"},
+    "qwen/qwen3.8-27b": {"reasoning_effort": "none", "reasoning_format": "hidden"},
+    "qwen/qwen3-32b": {"reasoning_effort": "none", "reasoning_format": "hidden"},
+}
+
+# HTTP statuses that trigger a fallback to the next model in the chain.
+_RETRYABLE_STATUSES = {429, 503, 404}
+
+
+def _groq_model_kwargs(model: str) -> dict:
+    """Return extra request params for a given Groq model."""
+    import json as _json
+
+    # Env override: GROQ_MODEL_KWARGS_JSON='{"model": {"param": "value"}}'
+    raw = getattr(settings, "GROQ_MODEL_KWARGS_JSON", "") or ""
+    if raw:
+        try:
+            overrides = _json.loads(raw)
+            if isinstance(overrides, dict) and model in overrides:
+                return dict(overrides[model])
+        except Exception:
+            logger.warning("GROQ_MODEL_KWARGS_JSON is not valid JSON â€” ignoring")
+    return dict(_DEFAULT_GROQ_MODEL_KWARGS.get(model, {}))
+
+
+# ChatGroq fields that must be passed explicitly (not via model_kwargs).
+# langchain-groq rejects known params inside model_kwargs with a
+# pydantic ValidationError, so we split per-model params on this set.
+_CHATGROQ_EXPLICIT_FIELDS = {
+    "reasoning_effort",
+    "reasoning_format",
+    "max_tokens",
+    "stop",
+    "n",
+    "temperature",
+    "service_tier",
+    "streaming",
+    "max_retries",
+    "request_timeout",
+}
+
+
+def _split_groq_params(params: dict) -> tuple:
+    """Split params into (explicit ChatGroq fields, model_kwargs dict)."""
+    explicit = {k: v for k, v in params.items() if k in _CHATGROQ_EXPLICIT_FIELDS}
+    extra = {k: v for k, v in params.items() if k not in _CHATGROQ_EXPLICIT_FIELDS}
+    return explicit, extra
+
+
+def _is_retryable_groq_error(exc: Exception) -> bool:
+    """True for rate-limit (429), capacity (503), or unknown-model (404) errors."""
+    status = getattr(exc, "status_code", None)
+    if status is None:
+        resp = getattr(exc, "response", None)
+        status = getattr(resp, "status_code", None)
+    if status in _RETRYABLE_STATUSES:
+        return True
+    # Fallback: some wrappers surface the code only in the message
+    msg = str(exc).lower()
+    return "429" in msg or "rate limit" in msg or "rate_limit" in msg
+
 
 def _get_groq_llm():
-    """Get Groq LLM instance."""
+    """
+    Get Groq LLM instance with automatic model fallback on rate limits.
+
+    Returns a ChatGroq subclass instance whose _generate/_agenerate retry the
+    request against the next model in the chain on HTTP 429/503/404. Because the
+    fallback lives inside the chat model itself, it works through bind_tools(),
+    RunnableBinding, streaming, and every LangGraph code path.
+    """
     try:
         from langchain_groq import ChatGroq
+        from pydantic import PrivateAttr
 
         if not settings.GROQ_API_KEY:
-            raise ValueError(
-                "GROQ_API_KEY not configured in environment variables"
-            )
+            raise ValueError("GROQ_API_KEY not configured in environment variables")
 
-        llm = ChatGroq(
+        primary = settings.GROQ_PRIMARY_MODEL or settings.GROQ_MODEL
+        fallbacks = [
+            m.strip()
+            for m in (settings.GROQ_FALLBACK_MODELS or "").split(",")
+            if m.strip() and m.strip() != primary
+        ]
+        chain = fallbacks  # models to try after the primary fails
+        all_models = [primary] + chain
+
+        class GroqFallbackChatGroq(ChatGroq):
+            """ChatGroq that fails over to backup models on retryable errors."""
+
+            _fallback_chain: list = PrivateAttr(default_factory=list)
+            _chain_kwargs: dict = PrivateAttr(default_factory=dict)
+
+            def _apply_model_params(self, model: str) -> None:
+                """Set explicit fields + model_kwargs for the given model."""
+                explicit, extra = _split_groq_params(_groq_model_kwargs(model))
+                for k, v in explicit.items():
+                    setattr(self, k, v)
+                self.model_kwargs = extra
+
+            def _advance_model(self) -> bool:
+                if not self._fallback_chain:
+                    return False
+                nxt = self._fallback_chain.pop(0)
+                logger.warning(f"Groq model {self.model_name} failed; falling back to {nxt}")
+                self.model_name = nxt
+                self._apply_model_params(nxt)
+                return True
+
+            def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+                while True:
+                    try:
+                        return super()._generate(
+                            messages, stop=stop, run_manager=run_manager, **kwargs
+                        )
+                    except Exception as e:
+                        if _is_retryable_groq_error(e) and self._advance_model():
+                            continue
+                        raise
+
+            async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+                while True:
+                    try:
+                        return await super()._agenerate(
+                            messages, stop=stop, run_manager=run_manager, **kwargs
+                        )
+                    except Exception as e:
+                        if _is_retryable_groq_error(e) and self._advance_model():
+                            continue
+                        raise
+
+        llm = GroqFallbackChatGroq(
             api_key=settings.GROQ_API_KEY,
-            model=settings.GROQ_MODEL,
+            model=primary,
+            groq_api_base=settings.GROQ_BASE_URL,
             temperature=0.7,
         )
+        llm._apply_model_params(primary)
+        llm._fallback_chain = list(chain)
 
-        logger.info(f"Initialized Groq LLM: {settings.GROQ_MODEL}")
+        logger.info(f"Initialized Groq LLM with fallback chain: {' -> '.join(all_models)}")
         return llm
 
     except ImportError as e:
         logger.error(f"Failed to import langchain_groq: {e}")
         raise ImportError(
-            "langchain_groq is required for Groq provider. "
-            "Install with: pip install langchain-groq"
+            "langchain_groq is required for Groq provider. Install with: pip install langchain-groq"
         )
     except Exception as e:
         logger.error(f"Failed to initialize Groq LLM: {e}")
         raise
 
 
-# ── GEMINI ────────────────────────────────────────────────────────────────────
+# â”€â”€ GEMINI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 # Models that use extended thinking and require thought_signature passthrough.
 # Gemini 2.5 thinking models mandate this when function/tool calling is active.
@@ -401,9 +469,7 @@ def _get_gemini_llm():
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         if not settings.GOOGLE_API_KEY:
-            raise ValueError(
-                "GOOGLE_API_KEY not configured in environment variables"
-            )
+            raise ValueError("GOOGLE_API_KEY not configured in environment variables")
 
         model_name: str = settings.GEMINI_MODEL
         thinking = _is_thinking_model(model_name)
@@ -426,7 +492,7 @@ def _get_gemini_llm():
             # call part when thinking is enabled. On the very next request we
             # MUST echo that signature back inside the corresponding
             # function-result part, otherwise Gemini raises:
-            #   "Function call is missing a thought_signature …"
+            #   "Function call is missing a thought_signature â€¦"
             #
             # Setting include_thoughts=True in generation_config makes the API
             # return the signatures. LangChain >= 2.1.0 then automatically
@@ -443,8 +509,7 @@ def _get_gemini_llm():
             )
         else:
             logger.info(
-                f"Gemini standard model ({model_name}): "
-                "thought_signature passthrough not required."
+                f"Gemini standard model ({model_name}): thought_signature passthrough not required."
             )
 
         llm = ChatGoogleGenerativeAI(**init_kwargs)
@@ -463,12 +528,13 @@ def _get_gemini_llm():
         raise
 
 
-# ── OPTIONAL: bind_tools wrapper ─────────────────────────────────────────────
+# â”€â”€ OPTIONAL: bind_tools wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # LangGraph typically calls llm.bind_tools(tools) before passing the LLM into
 # the graph.  For thinking models we need to make sure that bind_tools also
 # carries the include_thoughts generation config.  The helper below is a
 # convenience wrapper you can use in weather_agent.py if the plain bind_tools
 # call still omits the flag after upgrading langchain-google-genai.
+
 
 def get_llm_with_tools(tools: list):
     """
