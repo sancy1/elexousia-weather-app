@@ -24,6 +24,6 @@ export function useAutoDetect(enabled: boolean = true) {
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 0, // Don't retry auto-detect (will fail on localhost)
+    retry: 2, // tolerate cold starts / transient proxy failures
   });
 }

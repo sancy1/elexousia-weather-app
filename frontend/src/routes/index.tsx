@@ -4,20 +4,20 @@ import { CloudSun, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { Sidebar } from "@/components/weather/Sidebar";
 import { TopBar } from "@/components/weather/TopBar";
 import { HeroCard } from "@/components/weather/HeroCard";
-import { ForecastStrip } from "@/components/weather/ForecastStrip";
 import { DetailGrid } from "@/components/weather/DetailGrid";
 import { WhatToWear } from "@/components/weather/WhatToWear";
 import { CompareCities } from "@/components/weather/CompareCities";
 import { ChatThread } from "@/components/weather/ChatThread";
 import { PromptBar } from "@/components/weather/PromptBar";
 import { initialChat, type ChatMessage } from "@/components/weather/data";
-import { useAutoDetect } from "@/hooks/useAutoDetect";
+import { useLocationResolution } from "@/hooks/useLocationResolution";
 import { useWeather } from "@/hooks/useWeather";
-import { useForecast } from "@/hooks/useForecast";
 import { useWeatherDetail } from "@/hooks/useWeatherDetail";
 import { useClothingAdvice } from "@/hooks/useClothingAdvice";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
+import { chatHistoryApi } from "@/lib/chat-history";
+import type { ConversationSummary } from "@/lib/api-types";
 import type { Condition } from "@/components/weather/data";
 
 // Note: the 'head' property is removed as it is only for SSR.
@@ -28,15 +28,43 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { user } = useAuth();
   const [unit, setUnit] = useState<"C" | "F">("C");
-  const [selectedDay, setSelectedDay] = useState(0);
   const [activeHistory, setActiveHistory] = useState("1");
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat);
   const [mobileNav, setMobileNav] = useState(false);
-  const [city, setCity] = useState<string>("London");
+  const {
+    city,
+    locationStatus,
+    coords,
+    locationLabel,
+    geoLoading,
+    geoError,
+    handleLocate,
+    selectCity,
+  } = useLocationResolution();
+  const [sessionId, setSessionId] = useState<string>("");
+
+  // Persistent chat session id for conversation memory (survives reloads).
+  useEffect(() => {
+    try {
+      const key = "elexousia_chat_session_id";
+      let id = window.localStorage.getItem(key);
+      if (!id) {
+        id =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        window.localStorage.setItem(key, id);
+      }
+      setSessionId(id);
+    } catch {
+      // localStorage unavailable — chat still works without memory
+      setSessionId("");
+    }
+  }, []);
 
   // 1. Client-side Meta Tag Management
   useEffect(() => {
-    document.title = "EL-Exousia Weather — AI Weather Intelligence";
+    document.title = "Elexousia Weather — AI Weather Intelligence";
     const metaDesc = document.querySelector('meta[name="description"]');
     const content = "Real-time weather and conversational AI forecasts for any city in the world.";
     
@@ -50,20 +78,11 @@ function Index() {
     }
   }, []);
 
-  // 2. Data Fetching Hooks
-  const { data: autoData } = useAutoDetect();
-  
-  useEffect(() => {
-    if (autoData?.city && city === "London") {
-      setCity(autoData.city);
-    }
-  }, [autoData, city]);
-
-  const { data: weatherData, isLoading: weatherLoading, error: weatherError } = useWeather(city, true);
-  const { data: forecastData, isLoading: forecastLoading } = useForecast(city, true, 7);
+  // 2. Data Fetching Hooks — gated on resolved location (empty city = no fetch)
+  const { data: weatherData, isLoading: weatherLoading, error: weatherError } = useWeather(city, true, coords ?? undefined);
   const today = new Date().toISOString().split('T')[0];
-  const { data: detailData, isLoading: detailLoading } = useWeatherDetail(city, today, true);
-  const { data: clothingData } = useClothingAdvice(city, true);
+  const { data: detailData, isLoading: detailLoading } = useWeatherDetail(city, today, true, coords ?? undefined);
+  const { data: clothingData } = useClothingAdvice(city, true, coords ?? undefined);
 
   // 3. Chat functionality
   const { sendMessage, isStreaming, currentResponse, resolvedCity, clearResolvedCity } = useChat();
@@ -72,9 +91,9 @@ function Index() {
   const handleCitySelect = useCallback(
     (next: string) => {
       clearResolvedCity();
-      setCity(next);
+      selectCity(next);
     },
-    [clearResolvedCity]
+    [clearResolvedCity, selectCity]
   );
 
   // Only react when the chat stream emits a *new* resolved_city. Including `city`
@@ -82,8 +101,81 @@ function Index() {
   // search picks and overwrite the user's choice with a stale `resolvedCity`.
   useEffect(() => {
     if (!resolvedCity) return;
-    setCity((prev) => (resolvedCity !== prev ? resolvedCity : prev));
-  }, [resolvedCity]);
+    selectCity(resolvedCity);
+  }, [resolvedCity, selectCity]);
+
+  const scrollToChat = useCallback(() => {
+    // Let React render the loaded messages, then bring the chat into view.
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document
+          .getElementById("chat-thread")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    });
+  }, []);
+
+  // Load a past conversation into the chat area and continue its session.
+  const handleLoadConversation = useCallback(
+    async (conv: ConversationSummary) => {
+      try {
+        const { messages: exchanges } = await chatHistoryApi.getMessages(
+          conv.id,
+          sessionId || undefined
+        );
+        const loaded: ChatMessage[] = [];
+        exchanges.forEach((ex, i) => {
+          if (ex.user_message) {
+            loaded.push({ id: `h${i}u`, role: "user", text: ex.user_message, time: "" });
+          }
+          if (ex.bot_response) {
+            loaded.push({ id: `h${i}a`, role: "agent", text: ex.bot_response, time: "" });
+          }
+        });
+        setMessages(loaded.length ? loaded : initialChat);
+        // Continue the loaded conversation's session so new messages
+        // are appended to it rather than the previous session.
+        setSessionId(conv.session_id);
+        try {
+          window.localStorage.setItem("elexousia_chat_session_id", conv.session_id);
+        } catch { /* ignore */ }
+        if (conv.city_name) {
+          selectCity(conv.city_name);
+        }
+        clearResolvedCity();
+        scrollToChat();
+      } catch {
+        // Leave current chat untouched on failure
+      }
+    },
+    [sessionId, clearResolvedCity, selectCity, scrollToChat]
+  );
+
+  // Start a fresh conversation with a new session id.
+  const handleNewChat = useCallback(() => {
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setSessionId(id);
+    try {
+      window.localStorage.setItem("elexousia_chat_session_id", id);
+    } catch { /* ignore */ }
+    setMessages(initialChat);
+    clearResolvedCity();
+    scrollToChat();
+  }, [clearResolvedCity, scrollToChat]);
+
+  // If the deleted conversation is the one currently open (or history was
+  // cleared), start a fresh chat so the UI never shows a dead session.
+  const handleConversationDeleted = useCallback(
+    (conv: ConversationSummary) => {
+      if (conv.id === -1 || conv.session_id === sessionId) {
+        handleNewChat();
+      }
+    },
+    [sessionId, handleNewChat]
+  );
 
   const handleSend = async (text: string) => {
     const id = Date.now().toString();
@@ -94,7 +186,7 @@ function Index() {
     setMessages((m) => [...m, { id: agentId, role: "agent", text: "", time: "now" }]);
     
     try {
-      const finalText = await sendMessage(text, undefined, city, unit);
+      const finalText = await sendMessage(text, sessionId || undefined, locationLabel || city, unit);
       const displayText = finalText && finalText.trim()
         ? finalText
         : "I'm sorry, I didn't receive a response from the weather agent. Please try asking again — for example, 'What's the weather in London?'";
@@ -139,7 +231,8 @@ function Index() {
     return "sunny";
   };
 
-  const isLoading = weatherLoading || detailLoading || forecastLoading;
+  const isLoading =
+    locationStatus === "initializing" || weatherLoading || detailLoading;
   const error = weatherError;
   const weather = weatherData;
 
@@ -157,10 +250,31 @@ function Index() {
         mobileOpen={mobileNav}
         onMobileClose={() => setMobileNav(false)}
         currentCity={city}
+        sessionId={sessionId || undefined}
+        onLoadConversation={handleLoadConversation}
+        onNewChat={handleNewChat}
+        onConversationDeleted={handleConversationDeleted}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
-        <TopBar city={weather ? `${weather.city}, ${weather.country}` : "Loading..."} unit={unit} onUnit={setUnit} onMenu={() => setMobileNav(true)} user={user} />
+        <TopBar
+          city={
+            locationStatus === "initializing"
+              ? "Detecting location…"
+              : locationStatus === "needs_manual"
+                ? "Choose your location"
+                : locationLabel ||
+                  (weather ? `${weather.city}, ${weather.country}` : city || "…")
+          }
+          unit={unit}
+          onUnit={setUnit}
+          onMenu={() => setMobileNav(true)}
+          user={user}
+          onLocate={handleLocate}
+          locating={geoLoading}
+          locationError={geoError}
+          approximate={locationStatus === "resolved_approximate"}
+        />
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 py-6 space-y-6 transition-all">
@@ -194,6 +308,19 @@ function Index() {
                   </div>
                 </div>
               </div>
+            ) : locationStatus === "needs_manual" ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-center max-w-sm">
+                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <CloudSun className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Where are you?</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    We couldn't detect your location automatically. Search for your city in the sidebar,
+                    or tap the location button for precise weather.
+                  </p>
+                </div>
+              </div>
             ) : weather ? (
               <>
                 <HeroCard
@@ -210,18 +337,19 @@ function Index() {
                   uvIndex={weather.uv_index}
                   visibilityKm={weather.visibility_km}
                 />
-                <ForecastStrip selected={selectedDay} onSelect={setSelectedDay} unit={unit} data={forecastData} city={city} />
                 <DetailGrid data={detailData} />
                 <WhatToWear data={clothingData} unit={unit} />
                 <CompareCities unit={unit} />
               </>
             ) : null}
-            <ChatThread 
-              messages={messages} 
-              isTyping={isStreaming} 
-              agentName="EL-Exousia Weather Agent"
-              dataLocation={weatherData?.city || ""}
-            />
+            <div id="chat-thread">
+              <ChatThread 
+                messages={messages} 
+                isTyping={isStreaming} 
+                agentName="Elexousia Weather Agent"
+                dataLocation={weatherData?.city || ""}
+              />
+            </div>
           </div>
         </div>
 

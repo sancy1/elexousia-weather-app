@@ -135,7 +135,7 @@ export function PromptBar({ onSend, isStreaming, currentCity }: Props) {
         </button>
       </div>
       <div className="mt-2 text-center text-[10px] text-muted-foreground">
-        EL-Exousia can make mistakes. Verify forecasts before travel decisions.
+        Elexousia can make mistakes. Verify forecasts before travel decisions.
       </div>
     </div>
   );

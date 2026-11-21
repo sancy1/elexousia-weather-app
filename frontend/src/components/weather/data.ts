@@ -66,7 +66,6 @@ export const savedLocations = [
 
 export const quickChips: { label: string; icon: string }[] = [
   { label: "3-day forecast", icon: "📅" },
-  { label: "7-day forecast", icon: "📆" },
   { label: "Compare with another city", icon: "⚖️" },
   { label: "Travel advice", icon: "✈️" },
   { label: "What to wear", icon: "👕" },

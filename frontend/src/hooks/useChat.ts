@@ -54,8 +54,8 @@ function sanitizeText(s: string): string {
   out = out.replace(/```/g, "");
   // Normalize unicode spaces (narrow no-break U+202F, no-break U+00A0) to regular spaces
   out = out.replace(/[  ]/g, " ");
-  // Trim extra whitespace
-  return out.trim();
+  // Do NOT trim — streamed tokens rely on their own whitespace
+  return out;
 }
 
 export function useChat() {
@@ -79,44 +79,65 @@ export function useChat() {
 
       try {
         console.log(`Sending chat message: ${message}`);
-        const stream = await weatherApi.chatStream(message, sessionId, cityContext, unit);
+        const stream = await weatherApi.chatStream(
+          message,
+          sessionId,
+          cityContext,
+          unit,
+          abortControllerRef.current?.signal
+        );
 
         const reader = stream.getReader();
         const decoder = new TextDecoder();
+
+        // SSE events are delimited by a blank line ("\n\n") and can be split
+        // across arbitrary chunk boundaries — carry the incomplete tail over.
+        let buffer = "";
+
+        const handleEvent = (raw: string) => {
+          const line = raw.trim();
+          if (!line.startsWith("data: ")) return;
+          try {
+            const event: ChatEvent = JSON.parse(line.slice(6));
+            console.log("Chat event received:", event);
+
+            if (event.type === "resolved_city" && event.city) {
+              setResolvedCity(event.city);
+            } else if (event.type === "token" && event.content) {
+              const sanitized = sanitizeText(event.content || "");
+              responseRef.current += sanitized;
+              setCurrentResponse(responseRef.current);
+            } else if (event.type === "done") {
+              setIsStreaming(false);
+            } else if (event.type === "error") {
+              console.error("Chat error:", event.detail);
+              const friendlyMessage = formatErrorMessage(sanitizeText(event.detail || "Unknown error"));
+              responseRef.current += `\n\n${friendlyMessage}`;
+              setCurrentResponse(responseRef.current);
+              setIsStreaming(false);
+            }
+          } catch (e) {
+            console.error("Failed to parse chat event:", e);
+          }
+        };
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n\n");
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          // Last element may be an incomplete event — keep it for next chunk
+          buffer = events.pop() ?? "";
 
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const event: ChatEvent = JSON.parse(line.slice(6));
-                console.log("Chat event received:", event);
-
-                if (event.type === "resolved_city" && event.city) {
-                  setResolvedCity(event.city);
-                } else if (event.type === "token" && event.content) {
-                  const sanitized = sanitizeText(event.content || "");
-                  responseRef.current += sanitized;
-                  setCurrentResponse(responseRef.current);
-                } else if (event.type === "done") {
-                  setIsStreaming(false);
-                } else if (event.type === "error") {
-                  console.error("Chat error:", event.detail);
-                  const friendlyMessage = formatErrorMessage(sanitizeText(event.detail || "Unknown error"));
-                  responseRef.current += `\n\n${friendlyMessage}`;
-                  setCurrentResponse(responseRef.current);
-                  setIsStreaming(false);
-                }
-              } catch (e) {
-                console.error("Failed to parse chat event:", e);
-              }
-            }
+          for (const raw of events) {
+            handleEvent(raw);
           }
+        }
+
+        // Flush any trailing event that arrived without a final blank line
+        if (buffer.trim()) {
+          handleEvent(buffer);
         }
       } catch (error) {
         if ((error as Error).name !== "AbortError") {

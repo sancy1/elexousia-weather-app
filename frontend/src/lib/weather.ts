@@ -5,6 +5,7 @@
 
 import type {
   AutoWeatherResponse,
+  NearbyWeatherResponse,
   CurrentWeatherResponse,
   ForecastResponse,
   HourlyForecastResponse,
@@ -46,6 +47,15 @@ interface SaveLocationRequest {
   label: string;
 }
 
+export interface Coords {
+  lat: number;
+  lon: number;
+}
+
+function coordsQuery(coords?: Coords): string {
+  return coords ? `&lat=${coords.lat}&lon=${coords.lon}` : "";
+}
+
 export const weatherApi = {
   /**
    * Auto-detect location and get weather
@@ -57,15 +67,19 @@ export const weatherApi = {
   /**
    * Get current weather for a city
    */
-  async getCurrentWeather(city: string): Promise<CurrentWeatherResponse> {
-    return apiClient.get<CurrentWeatherResponse>(`/api/weather/current?city=${encodeURIComponent(city)}`);
+  async getCurrentWeather(city: string, coords?: Coords): Promise<CurrentWeatherResponse> {
+    const cityParam = coords ? "" : `city=${encodeURIComponent(city)}&`;
+    return apiClient.get<CurrentWeatherResponse>(`/api/weather/current?${cityParam}${coordsQuery(coords).slice(1)}`);
   },
 
   /**
    * Get 7-day forecast for a city
    */
-  async getForecast(city: string, days: number = 7): Promise<ForecastResponse> {
-    return apiClient.get<ForecastResponse>(`/api/weather/forecast?city=${encodeURIComponent(city)}&days=${days}`);
+  async getForecast(city: string, days: number = 7, coords?: Coords): Promise<ForecastResponse> {
+    const cityParam = coords ? "" : `city=${encodeURIComponent(city)}&`;
+    return apiClient.get<ForecastResponse>(
+      `/api/weather/forecast?${cityParam}days=${days}${coordsQuery(coords)}`
+    );
   },
 
   /**
@@ -80,8 +94,11 @@ export const weatherApi = {
   /**
    * Get detailed weather information for a city
    */
-  async getWeatherDetail(city: string, date: string): Promise<WeatherDetailResponse> {
-    return apiClient.get<WeatherDetailResponse>(`/api/weather/detail?city=${encodeURIComponent(city)}&date=${encodeURIComponent(date)}`);
+  async getWeatherDetail(city: string, date: string, coords?: Coords): Promise<WeatherDetailResponse> {
+    const cityParam = coords ? "" : `city=${encodeURIComponent(city)}&`;
+    return apiClient.get<WeatherDetailResponse>(
+      `/api/weather/detail?${cityParam}date=${encodeURIComponent(date)}${coordsQuery(coords)}`
+    );
   },
 
   /**
@@ -94,21 +111,36 @@ export const weatherApi = {
   /**
    * Get clothing advice for a city
    */
-  async getClothingAdvice(city: string): Promise<ClothingAdviceResponse> {
-    return apiClient.get<ClothingAdviceResponse>(`/api/weather/wear?city=${encodeURIComponent(city)}`);
+  async getClothingAdvice(city: string, coords?: Coords): Promise<ClothingAdviceResponse> {
+    const cityParam = coords ? "" : `city=${encodeURIComponent(city)}&`;
+    return apiClient.get<ClothingAdviceResponse>(`/api/weather/wear?${cityParam}${coordsQuery(coords).slice(1)}`);
+  },
+
+  /**
+   * Weather for exact coordinates + reverse-geocoded location label
+   */
+  async getNearbyWeather(lat: number, lon: number): Promise<NearbyWeatherResponse> {
+    return apiClient.get<NearbyWeatherResponse>(`/api/weather/nearby?lat=${lat}&lon=${lon}`);
   },
 
   /**
    * Send chat message with SSE streaming
    */
-  async chatStream(message: string, sessionId?: string, cityContext?: string, unit: string = "C"): Promise<ReadableStream> {
+  async chatStream(
+    message: string,
+    sessionId?: string,
+    cityContext?: string,
+    unit: string = "C",
+    signal?: AbortSignal
+  ): Promise<ReadableStream> {
     const apiUrl = `${env.API_BASE_URL}/api/chat`;
     console.log(`Chat API URL: ${apiUrl}`);
     console.log(`Sending chat:`, { message, sessionId, cityContext, unit });
-    
+
     const response = await fetch(apiUrl, {
       method: "POST",
       credentials: "include",
+      signal,
       headers: {
         "Content-Type": "application/json",
       },

@@ -4,16 +4,16 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { weatherApi } from "@/lib/weather";
+import { weatherApi, type Coords } from "@/lib/weather";
 import type { WeatherDetailResponse } from "@/lib/api-types";
 
-export function useWeatherDetail(city: string, date: string, enabled: boolean = true) {
+export function useWeatherDetail(city: string, date: string, enabled: boolean = true, coords?: Coords) {
   return useQuery({
-    queryKey: ["weather", "detail", city, date],
+    queryKey: ["weather", "detail", city, date, coords?.lat, coords?.lon],
     queryFn: async () => {
       try {
         console.log(`Fetching weather detail for city: ${city}, date: ${date}`);
-        const data = await weatherApi.getWeatherDetail(city, date);
+        const data = await weatherApi.getWeatherDetail(city, date, coords);
         console.log("Weather detail received:", data);
         return data;
       } catch (error) {
@@ -30,7 +30,7 @@ export function useWeatherDetail(city: string, date: string, enabled: boolean = 
         } as WeatherDetailResponse;
       }
     },
-    enabled: enabled && !!city && !!date,
+    enabled: enabled && (!!city || !!coords) && !!date,
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 0,

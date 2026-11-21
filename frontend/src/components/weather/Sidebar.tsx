@@ -289,7 +289,7 @@
 //         </div>
 //         {showLabels && (
 //           <div className="flex flex-col leading-tight flex-1 min-w-0">
-//             <span className="text-[13px] font-semibold tracking-tight truncate">EL-Exousia</span>
+//             <span className="text-[13px] font-semibold tracking-tight truncate">Elexousia</span>
 //             <span className="text-[10px] text-muted-foreground tracking-wider uppercase truncate">Weather Intel</span>
 //           </div>
 //         )}
@@ -891,7 +891,7 @@
 //         </div>
 //         {showLabels && (
 //           <div className="flex flex-col leading-tight flex-1 min-w-0">
-//             <span className="text-[13px] font-semibold tracking-tight truncate">EL-Exousia</span>
+//             <span className="text-[13px] font-semibold tracking-tight truncate">Elexousia</span>
 //             <span className="text-[10px] text-muted-foreground tracking-wider uppercase truncate">Weather Intel</span>
 //           </div>
 //         )}
@@ -1249,12 +1249,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   CloudSun, Plus, Search, MapPin, Briefcase, Home, Plane,
-  PanelLeftClose, PanelLeftOpen, X, Trash2, Loader2,
+  PanelLeftClose, PanelLeftOpen, X, Trash2, Loader2, MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { weatherApi } from "@/lib/weather";
+import { ChatHistoryPanel } from "@/components/weather/ChatHistoryPanel";
+import type { ConversationSummary } from "@/lib/api-types";
 
 interface SavedLocation {
   id: number;
@@ -1285,6 +1287,10 @@ interface Props {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   currentCity?: string;
+  sessionId?: string;
+  onLoadConversation?: (conv: ConversationSummary) => void;
+  onNewChat?: () => void;
+  onConversationDeleted?: (conv: ConversationSummary) => void;
 }
 
 const formatSearchDate = (dateString: string): string => {
@@ -1309,9 +1315,10 @@ const MIN_W = 220;
 const MAX_W = 420;
 const COLLAPSED_W = 68;
 
-export function Sidebar({ activeId, onSelect, onCitySelect, mobileOpen, onMobileClose, currentCity }: Props) {
+export function Sidebar({ activeId, onSelect, onCitySelect, mobileOpen, onMobileClose, currentCity, sessionId, onLoadConversation, onNewChat, onConversationDeleted }: Props) {
   const [width, setWidth] = useState(280);
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarView, setSidebarView] = useState<"main" | "history">("main");
   const [searchQuery, setSearchQuery] = useState("");
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -1531,13 +1538,31 @@ export function Sidebar({ activeId, onSelect, onCitySelect, mobileOpen, onMobile
 
   const content = (showLabels: boolean) => (
     <>
+      {sidebarView === "history" ? (
+        <ChatHistoryPanel
+          onBack={() => setSidebarView("main")}
+          onSelectConversation={(conv) => {
+            setSidebarView("main");
+            onLoadConversation?.(conv);
+          }}
+          onNewChat={() => {
+            setSidebarView("main");
+            onNewChat?.();
+          }}
+          onConversationDeleted={(conv) => {
+            onConversationDeleted?.(conv);
+          }}
+          sessionId={sessionId}
+        />
+      ) : (
+      <>
       <div className="flex items-center gap-2.5 px-4 h-[52px] border-b border-border shrink-0">
         <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-[0_0_20px_-5px_var(--primary-glow)]">
           <CloudSun className="h-4 w-4 text-primary-foreground" strokeWidth={2.5} />
         </div>
         {showLabels && (
           <div className="flex flex-col leading-tight flex-1 min-w-0">
-            <span className="text-[13px] font-semibold tracking-tight truncate">EL-Exousia</span>
+            <span className="text-[13px] font-semibold tracking-tight truncate">Elexousia</span>
             <span className="text-[10px] text-muted-foreground tracking-wider uppercase truncate">Weather Intel</span>
           </div>
         )}
@@ -1566,6 +1591,17 @@ export function Sidebar({ activeId, onSelect, onCitySelect, mobileOpen, onMobile
         >
           <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
           Add location
+        </button>
+      )}
+
+      {showLabels && (
+        <button
+          onClick={() => setSidebarView("history")}
+          className="mx-3 mt-2 flex items-center justify-center gap-2 h-10 rounded-lg bg-secondary/60 hover:bg-secondary border border-border text-foreground text-sm font-medium transition-all"
+          title="Chat history"
+        >
+          <MessageSquare className="h-4 w-4 text-primary-glow" />
+          Chat History
         </button>
       )}
 
@@ -1804,6 +1840,8 @@ export function Sidebar({ activeId, onSelect, onCitySelect, mobileOpen, onMobile
           </div>
         ) : null}
       </div>
+      </>
+      )}
     </>
   );
 

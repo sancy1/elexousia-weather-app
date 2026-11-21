@@ -64,7 +64,7 @@ function HealthComponent() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight">System Integrity</h1>
-              <p className="text-sm text-muted-foreground">Real-time health status of EL-Exousia services</p>
+              <p className="text-sm text-muted-foreground">Real-time health status of Elexousia services</p>
             </div>
           </div>
         </div>

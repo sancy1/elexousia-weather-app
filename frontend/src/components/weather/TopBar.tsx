@@ -1,4 +1,4 @@
-﻿import { MapPin, Settings, Menu } from "lucide-react";
+﻿import { MapPin, Settings, Menu, LocateFixed, Loader2, AlertCircle } from "lucide-react";
 import { Notifications } from "./Notifications";
 
 interface Props {
@@ -7,9 +7,13 @@ interface Props {
   onUnit: (u: "C" | "F") => void;
   onMenu?: () => void;
   user?: any;
+  onLocate?: () => void;
+  locating?: boolean;
+  locationError?: string | null;
+  approximate?: boolean;
 }
 
-export function TopBar({ city, unit, onUnit, onMenu, user }: Props) {
+export function TopBar({ city, unit, onUnit, onMenu, user, onLocate, locating, locationError, approximate }: Props) {
   return (
     <header className="h-[60px] shrink-0 flex items-center justify-between px-5 border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-20">     
       <div className="flex items-center gap-3">
@@ -17,13 +21,41 @@ export function TopBar({ city, unit, onUnit, onMenu, user }: Props) {
           <Menu className="h-4 w-4" />
         </button>
         <div className="hidden sm:flex items-center gap-2.5">
-          <span className="text-[15px] font-semibold tracking-tight">EL-Exousia Weather</span>
+          <span className="text-[15px] font-semibold tracking-tight">Elexousia Weather</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary-glow font-medium tracking-wider uppercase">Live</span>
         </div>
-        <button className="ml-2 flex items-center gap-2 h-9 px-3 rounded-lg bg-secondary hover:bg-accent border border-border transition-all group">
-          <MapPin className="h-3.5 w-3.5 text-primary-glow group-hover:scale-110 transition-transform" />
-          <span className="text-[12px] font-medium">{city}</span>
+        {onLocate && (
+          <button
+            onClick={onLocate}
+            disabled={locating}
+            title={approximate ? "Get weather for your exact area" : "Use my location"}
+            className="h-9 flex items-center justify-center gap-1.5 px-2.5 rounded-lg bg-secondary hover:bg-accent border border-border transition-all disabled:opacity-50"
+          >
+            {locating ? (
+              <Loader2 className="h-4 w-4 animate-spin text-primary-glow" />
+            ) : locationError ? (
+              <AlertCircle className="h-4 w-4 text-destructive" />
+            ) : (
+              <LocateFixed className="h-4 w-4 text-primary-glow" />
+            )}
+            {approximate && !locating && (
+              <span className="hidden md:inline text-[11px] font-medium text-muted-foreground whitespace-nowrap">
+                Exact location
+              </span>
+            )}
+          </button>
+        )}
+        <button className="ml-2 flex items-center gap-2 h-9 px-3 rounded-lg bg-secondary hover:bg-accent border border-border transition-all group max-w-[220px]">
+          <MapPin className="h-3.5 w-3.5 text-primary-glow group-hover:scale-110 transition-transform shrink-0" />
+          <span className="text-[12px] font-medium truncate">
+            {approximate ? `≈ ${city}` : city}
+          </span>
         </button>
+        {locationError && (
+          <span className="hidden lg:inline text-[11px] text-destructive max-w-[180px] truncate" title={locationError}>
+            {locationError}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

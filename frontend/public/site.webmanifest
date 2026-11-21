@@ -1,6 +1,6 @@
 {
-  "name": "EL-Exousia Weather",
-  "short_name": "EL-Exousia",
+  "name": "Elexousia Weather",
+  "short_name": "Elexousia",
   "description": "AI-Powered Weather Intelligence",
   "start_url": "/",
   "display": "standalone",

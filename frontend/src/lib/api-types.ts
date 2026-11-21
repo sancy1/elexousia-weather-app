@@ -64,6 +64,28 @@ export interface AutoWeatherResponse {
   advice: string;
 }
 
+export interface NearbyWeatherResponse extends AutoWeatherResponse {
+  location_label: string;
+  location_precision: "neighbourhood" | "city" | "region";
+}
+
+export interface ConversationSummary {
+  id: number;
+  session_id: string;
+  title: string;
+  city_name: string | null;
+  message_count: number;
+  created_at: string | null;
+  last_active_at: string | null;
+}
+
+export interface ConversationExchange {
+  user_message: string | null;
+  bot_response: string | null;
+  city_resolved: string | null;
+  created_at: string | null;
+}
+
 export interface CurrentWeatherResponse {
   city: string;
   country: string;

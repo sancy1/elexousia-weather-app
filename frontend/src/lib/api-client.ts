@@ -18,7 +18,15 @@ class ApiError extends Error {
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
+  /** Per-request timeout in ms. Defaults to DEFAULT_TIMEOUT_MS; 0 disables. */
+  timeoutMs?: number;
 }
+
+/**
+ * Default request timeout. Generous enough for slow-but-alive connections;
+ * only aborts requests that are genuinely hung (dead socket, server down).
+ */
+const DEFAULT_TIMEOUT_MS = 25_000;
 
 class ApiClient {
   private baseUrl: string;
@@ -95,19 +103,50 @@ class ApiClient {
     endpoint: string,
     config: RequestConfig = {}
   ): Promise<T> {
-    const { params, ...requestConfig } = config;
+    const { params, timeoutMs, ...requestConfig } = config;
     const url = this.buildUrl(endpoint, params);
 
-    const response = await fetch(url, {
-      ...requestConfig,
-      credentials: this.getCredentials(),
-      headers: {
-        "Content-Type": "application/json",
-        ...requestConfig.headers,
-      },
-    });
+    // AbortController merges the timeout with any caller-provided signal so
+    // either one can cancel the request. The timer stays armed through
+    // handleResponse so a stalled body read is also bounded.
+    const controller = new AbortController();
+    const effectiveTimeout = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const timer =
+      effectiveTimeout > 0
+        ? setTimeout(
+            () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+            effectiveTimeout
+          )
+        : null;
 
-    return this.handleResponse<T>(response);
+    const callerSignal = requestConfig.signal;
+    if (callerSignal) {
+      if (callerSignal.aborted) {
+        controller.abort(callerSignal.reason);
+      } else {
+        callerSignal.addEventListener(
+          "abort",
+          () => controller.abort(callerSignal.reason),
+          { once: true }
+        );
+      }
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...requestConfig,
+        signal: controller.signal,
+        credentials: this.getCredentials(),
+        headers: {
+          "Content-Type": "application/json",
+          ...requestConfig.headers,
+        },
+      });
+
+      return await this.handleResponse<T>(response);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /**

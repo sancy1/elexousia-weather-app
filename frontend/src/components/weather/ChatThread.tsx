@@ -86,7 +86,7 @@ interface Props {
 export function ChatThread({ 
   messages, 
   isTyping, 
-  agentName = "EL-Exousia Weather Agent",
+  agentName = "Elexousia Weather Agent",
   dataLocation = "",
   dataSource = "WeatherAPI.com"
 }: Props) {
