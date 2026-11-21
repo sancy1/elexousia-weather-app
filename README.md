@@ -1,4 +1,4 @@
-# EL-Exousia Weather
+# Elexousia Weather
 
 ---
 
@@ -31,7 +31,7 @@
 
 An intelligent weather forecasting application powered by AI, featuring real-time weather data, conversational AI forecasts, and personalized user experiences.
 
-![EL-Exousia Weather](https://img.shields.io/badge/Weather-AI%20Powered-blue)
+![Elexousia Weather](https://img.shields.io/badge/Weather-AI%20Powered-blue)
 ![React](https://img.shields.io/badge/Frontend-React-61DAFB)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)
 ![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791)

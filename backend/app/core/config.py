@@ -375,6 +375,13 @@ class Settings(BaseSettings):
     EMBED_MODEL: str = "mxbai-embed-large"
     EMBED_DIM: int = 1024
 
+    # ── RAG / Vector Search ──────────────────────────────────
+    # When True (local development), retrieval uses Ollama embeddings +
+    # pgvector semantic search over city_embeddings. When False (production
+    # free tier), retrieval skips Ollama entirely and uses PostgreSQL
+    # city/alias resolution only — no embedding service required.
+    RAG_VECTOR_SEARCH_ENABLED: bool = True
+
     # ── Weather API ──────────────────────────────────────────
     WEATHER_API_KEY: str = ""
     WEATHER_API_BASE: str = "https://api.weatherapi.com/v1"

@@ -9,13 +9,39 @@ import httpx
 
 from app.agent.tools.city_resolver import resolve_city
 from app.infrastructure.external.weather_api import fetch_current, fetch_forecast
+from app.infrastructure.external.geocoding import reverse_geocode
 from app.infrastructure.repositories.weather_repository import save_cache, get_cache
+from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.middleware.rate_limit import get_client_ip
+from app.services.clothing_advice import generate_clothing_advice
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
+
+
+async def _resolve_coords(city: Optional[str], lat: Optional[float], lon: Optional[float]):
+    """
+    Resolve request coordinates.
+
+    If explicit lat/lon are supplied they are used directly (browser
+    geolocation) — no city-name round-trip, preserving precision.
+    Otherwise the city name is resolved through the normal chain.
+
+    Returns (lat, lon, loc_dict_or_None).
+    Raises HTTPException 404 when a city name is required but not found.
+    """
+    if lat is not None and lon is not None:
+        return float(lat), float(lon), None
+
+    if not city:
+        raise HTTPException(status_code=400, detail="Provide either 'city' or 'lat'+'lon'")
+
+    loc = await resolve_city(city)
+    if not loc:
+        raise HTTPException(status_code=404, detail=f"City '{city}' not found")
+    return float(loc["latitude"]), float(loc["longitude"]), loc
 
 
 async def detect_location_from_ip(ip: str) -> Optional[dict]:
@@ -28,13 +54,51 @@ async def detect_location_from_ip(ip: str) -> Optional[dict]:
     Returns:
         City information dict or None if all services fail
     """
-    # Handle localhost/private IPs - can't geocode these
-    if (
+    # Handle localhost/private IPs - can't geocode these directly.
+    # Outside production (local dev), fall back to WeatherAPI's auto:ip,
+    # which geolocates the backend's own outbound IP — on a dev machine
+    # that is the developer's real public IP.
+    is_private = (
         ip in ["127.0.0.1", "localhost", "::1"]
         or ip.startswith("192.168.")
         or ip.startswith("10.")
         or ip.startswith("172.")
-    ):
+    )
+    if is_private:
+        if settings.ENVIRONMENT == "production":
+            logger.info(f"Local/private IP detected: {ip}, cannot auto-detect location")
+            return None
+        logger.info(
+            f"Private IP {ip} in {settings.ENVIRONMENT} — trying WeatherAPI auto:ip fallback"
+        )
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                resp = await client.get(
+                    f"{settings.WEATHER_API_BASE}/current.json",
+                    params={"key": settings.WEATHER_API_KEY, "q": "auto:ip"},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    loc = data.get("location", {})
+                    if (
+                        loc.get("name")
+                        and loc.get("lat") is not None
+                        and loc.get("lon") is not None
+                    ):
+                        result = {
+                            "city": loc.get("name"),
+                            "country": loc.get("country"),
+                            "country_code": loc.get("country_code"),
+                            "lat": loc.get("lat"),
+                            "lon": loc.get("lon"),
+                            "timezone": loc.get("tz_id"),
+                        }
+                        logger.info(
+                            f"Location detected via WeatherAPI auto:ip fallback: {result['city']}, {result['country']}"
+                        )
+                        return result
+        except Exception as e:
+            logger.warning(f"WeatherAPI auto:ip fallback failed: {e}")
         logger.info(f"Local/private IP detected: {ip}, cannot auto-detect location")
         return None
 
@@ -210,23 +274,22 @@ async def get_auto_weather(request: Request):
 
 
 @router.get("/current")
-async def get_current_weather_endpoint(city: str = Query(..., description="City name")):
+async def get_current_weather_endpoint(
+    city: Optional[str] = Query(None, description="City name"),
+    lat: Optional[float] = Query(None, description="Latitude (coordinate weather)"),
+    lon: Optional[float] = Query(None, description="Longitude (coordinate weather)"),
+):
     """
-    Get current weather for a named city
+    Get current weather for a named city or exact coordinates
     """
-    # Resolve city
-    loc = await resolve_city(city)
-    if not loc:
-        raise HTTPException(status_code=404, detail=f"City '{city}' not found")
+    lat, lon, loc = await _resolve_coords(city, lat, lon)
 
-    lat = float(loc["latitude"])
-    lon = float(loc["longitude"])
-
-    # Check cache
-    cache_key = f"current:{loc.get('city_id', 0)}"
-    cached = await get_cache(loc.get("city_id"), lat, lon, "current", days=1)
-    if cached:
-        return cached
+    # Check cache (only for city-resolved requests — coord cache lookup is
+    # not coordinate-aware and could return another location's data)
+    if loc:
+        cached = await get_cache(loc.get("city_id"), lat, lon, "current", days=1)
+        if cached:
+            return cached
 
     # Fetch live data
     try:
@@ -258,34 +321,32 @@ async def get_current_weather_endpoint(city: str = Query(..., description="City 
         "pressure_hpa": cur.get("pressure_mb"),
     }
 
-    # Save to cache
-    await save_cache(
-        loc.get("city_id"), "current", 1, result, cur["temp_c"], cur["condition"]["text"]
-    )
+    # Save to cache (city-resolved requests only)
+    if loc:
+        await save_cache(
+            loc.get("city_id"), "current", 1, result, cur["temp_c"], cur["condition"]["text"]
+        )
 
     return result
 
 
 @router.get("/forecast")
 async def get_forecast_endpoint(
-    city: str = Query(..., description="City name"),
+    city: Optional[str] = Query(None, description="City name"),
+    lat: Optional[float] = Query(None, description="Latitude (coordinate weather)"),
+    lon: Optional[float] = Query(None, description="Longitude (coordinate weather)"),
     days: int = Query(7, ge=1, le=7, description="Number of days (1-7)"),
 ):
     """
-    Get weather forecast for a city
+    Get weather forecast for a city or exact coordinates
     """
-    # Resolve city
-    loc = await resolve_city(city)
-    if not loc:
-        raise HTTPException(status_code=404, detail=f"City '{city}' not found")
+    lat, lon, loc = await _resolve_coords(city, lat, lon)
 
-    lat = float(loc["latitude"])
-    lon = float(loc["longitude"])
-
-    # Check cache
-    cached = await get_cache(loc.get("city_id"), lat, lon, "forecast", days=days)
-    if cached:
-        return cached
+    # Check cache (city-resolved requests only)
+    if loc:
+        cached = await get_cache(loc.get("city_id"), lat, lon, "forecast", days=days)
+        if cached:
+            return cached
 
     # Fetch live data
     try:
@@ -325,8 +386,9 @@ async def get_forecast_endpoint(
         "forecast": forecast_days,
     }
 
-    # Save to cache
-    await save_cache(loc.get("city_id"), "forecast", days, result)
+    # Save to cache (city-resolved requests only)
+    if loc:
+        await save_cache(loc.get("city_id"), "forecast", days, result)
 
     return result
 
@@ -397,19 +459,15 @@ async def compare_weather_endpoint(
 
 @router.get("/hourly")
 async def get_hourly_forecast(
-    city: str = Query(..., description="City name"),
+    city: Optional[str] = Query(None, description="City name"),
+    lat: Optional[float] = Query(None, description="Latitude (coordinate weather)"),
+    lon: Optional[float] = Query(None, description="Longitude (coordinate weather)"),
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
 ):
     """
     Get 24-hour breakdown for a specific date
     """
-    # Resolve city
-    loc = await resolve_city(city)
-    if not loc:
-        raise HTTPException(status_code=404, detail=f"City '{city}' not found")
-
-    lat = float(loc["latitude"])
-    lon = float(loc["longitude"])
+    lat, lon, loc = await _resolve_coords(city, lat, lon)
 
     # Fetch forecast data
     try:
@@ -447,24 +505,24 @@ async def get_hourly_forecast(
             }
         )
 
-    return {"city": loc.get("city_name"), "date": date, "hourly": hourly_data}
+    return {
+        "city": (loc or {}).get("city_name") or data["location"]["name"],
+        "date": date,
+        "hourly": hourly_data,
+    }
 
 
 @router.get("/detail")
 async def get_weather_detail(
-    city: str = Query(..., description="City name"),
+    city: Optional[str] = Query(None, description="City name"),
+    lat: Optional[float] = Query(None, description="Latitude (coordinate weather)"),
+    lon: Optional[float] = Query(None, description="Longitude (coordinate weather)"),
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
 ):
     """
     Get detailed weather for a specific day (rain, pressure, UV)
     """
-    # Resolve city
-    loc = await resolve_city(city)
-    if not loc:
-        raise HTTPException(status_code=404, detail=f"City '{city}' not found")
-
-    lat = float(loc["latitude"])
-    lon = float(loc["longitude"])
+    lat, lon, loc = await _resolve_coords(city, lat, lon)
 
     # Fetch forecast data
     try:
@@ -487,7 +545,7 @@ async def get_weather_detail(
     astro = target_day["astro"]
 
     return {
-        "city": loc.get("city_name"),
+        "city": (loc or {}).get("city_name") or data["location"]["name"],
         "date": date,
         "rain": {
             "chance_pct": d["daily_chance_of_rain"],
@@ -522,118 +580,17 @@ async def get_weather_detail(
     }
 
 
-def generate_clothing_advice(
-    temp_c: float, condition: str, rain_chance: int, uv_index: int
-) -> dict:
-    """
-    Generate clothing recommendations based on weather conditions
-    """
-    items = []
-    emoji = "☀️"
-    summary = "Light layers"
-    tagline = "Comfortable weather"
-
-    # Temperature-based recommendations
-    if temp_c < 5:
-        items.append(
-            {"icon": "🧥", "name": "Heavy winter coat", "note": "Insulated or down jacket"}
-        )
-        items.append(
-            {"icon": "🧣", "name": "Scarf and gloves", "note": "Essential for cold protection"}
-        )
-        items.append({"icon": "👢", "name": "Insulated boots", "note": "Waterproof recommended"})
-        emoji = "❄️"
-        summary = "Winter layers"
-        tagline = "Stay warm out there"
-    elif temp_c < 15:
-        items.append(
-            {"icon": "🧥", "name": "Medium-weight jacket", "note": "Fleece or light parka"}
-        )
-        items.append({"icon": "👕", "name": "Long-sleeve shirt", "note": "Layer for warmth"})
-        emoji = "🍂"
-        summary = "Cool weather gear"
-        tagline = "A light jacket does the trick"
-    elif temp_c < 25:
-        items.append({"icon": "👕", "name": "Light layers", "note": "T-shirt with light cardigan"})
-        items.append(
-            {"icon": "👖", "name": "Pants or jeans", "note": "Comfortable for mild weather"}
-        )
-        emoji = "🌤️"
-        summary = "Comfortable layers"
-        tagline = "Perfect weather"
-    else:
-        items.append(
-            {
-                "icon": "👕",
-                "name": "Light, breathable clothing",
-                "note": "Cotton or moisture-wicking fabrics",
-            }
-        )
-        items.append({"icon": "🧢", "name": "Hat and sunglasses", "note": "Sun protection"})
-        emoji = "☀️"
-        summary = "Summer essentials"
-        tagline = "Stay cool and protected"
-
-    # Condition-based additions
-    if rain_chance > 50 or "rain" in condition.lower() or "drizzle" in condition.lower():
-        items.insert(0, {"icon": "☂️", "name": "Umbrella", "note": "Compact or waterproof"})
-        items.insert(
-            1, {"icon": "🧥", "name": "Waterproof jacket", "note": "Rain shell or trench coat"}
-        )
-        items.append({"icon": "👟", "name": "Waterproof shoes", "note": "Avoid suede and canvas"})
-        emoji = "🌧️"
-        summary = "Rain-ready layers"
-        tagline = "Stay dry, stay sharp"
-    elif "snow" in condition.lower():
-        items.insert(
-            0, {"icon": "🧥", "name": "Waterproof winter coat", "note": "Insulated and windproof"}
-        )
-        items.insert(
-            1, {"icon": "👢", "name": "Snow boots", "note": "Insulated with good traction"}
-        )
-        emoji = "❄️"
-        summary = "Winter storm gear"
-        tagline = "Bundle up tight"
-
-    # UV-based additions
-    if uv_index >= 8:
-        if not any(item["name"] == "Hat and sunglasses" for item in items):
-            items.append(
-                {"icon": "🧢", "name": "Hat and sunglasses", "note": "UV protection essential"}
-            )
-        items.append(
-            {"icon": "🧴", "name": "SPF 50+ sunscreen", "note": "Apply generously and reapply"}
-        )
-
-    # Generate tip
-    if rain_chance > 60:
-        tip = "Showers expected on and off — keep an umbrella within reach all day."
-    elif temp_c > 30:
-        tip = "Hot conditions — stay hydrated and seek shade when possible."
-    elif temp_c < 5:
-        tip = "Very cold — limit exposed skin and dress in layers."
-    elif uv_index >= 8:
-        tip = "Very high UV — apply sunscreen every 2 hours if outdoors."
-    else:
-        tip = "Pleasant conditions — enjoy your day!"
-
-    return {"emoji": emoji, "summary": summary, "tagline": tagline, "items": items, "tip": tip}
-
-
 @router.get("/wear")
 async def get_clothing_advice(
-    city: str = Query(..., description="City name"), unit: str = Query("C", regex="^[CF]$")
+    city: Optional[str] = Query(None, description="City name"),
+    lat: Optional[float] = Query(None, description="Latitude (coordinate weather)"),
+    lon: Optional[float] = Query(None, description="Longitude (coordinate weather)"),
+    unit: str = Query("C", regex="^[CF]$"),
 ):
     """
     Get AI-powered clothing recommendations for current conditions
     """
-    # Resolve city
-    loc = await resolve_city(city)
-    if not loc:
-        raise HTTPException(status_code=404, detail=f"City '{city}' not found")
-
-    lat = float(loc["latitude"])
-    lon = float(loc["longitude"])
+    lat, lon, loc = await _resolve_coords(city, lat, lon)
 
     # Fetch current weather
     try:
@@ -660,6 +617,104 @@ async def get_clothing_advice(
         "temperature_f": cur["temp_f"],
         "condition": cur["condition"]["text"],
         **advice,
+    }
+
+
+@router.get("/nearby")
+async def get_nearby_weather(
+    lat: float = Query(..., description="Latitude"),
+    lon: float = Query(..., description="Longitude"),
+):
+    """
+    Weather for exact browser coordinates + reverse-geocoded location label.
+
+    Weather is fetched by coordinates (no city-name round-trip). The label is
+    the most specific readable name available — neighbourhood when the
+    geocoder provides one, otherwise city/region/country.
+    """
+    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        raise HTTPException(status_code=400, detail="Invalid coordinates")
+
+    # Reverse geocode (cached; falls back to WeatherAPI city-level)
+    geo = await reverse_geocode(lat, lon)
+
+    # Fetch live weather by coordinates
+    try:
+        current_data = await fetch_current(lat, lon)
+        forecast_data = await fetch_forecast(lat, lon, days=7)
+    except Exception as e:
+        logger.error(f"Failed to fetch nearby weather: {e}")
+        raise HTTPException(status_code=502, detail="Failed to fetch weather data")
+
+    cur = current_data["current"]
+    loc_data = current_data["location"]
+
+    # Location label: geocoder result, else WeatherAPI's own location name
+    if geo and geo.get("label"):
+        location_label = geo["label"]
+        precision = geo.get("precision", "city")
+        country = geo.get("country") or loc_data.get("country")
+        country_code = geo.get("country_code") or loc_data.get("country_code", "")
+    else:
+        location_label = f"{loc_data['name']}, {loc_data['country']}"
+        precision = "city"
+        country = loc_data.get("country")
+        country_code = loc_data.get("country_code", "")
+
+    # Build forecast array (same shape as /auto)
+    forecast_days = []
+    for day in forecast_data["forecast"]["forecastday"]:
+        d = day["day"]
+        forecast_days.append(
+            {
+                "date": day["date"],
+                "high_c": d["maxtemp_c"],
+                "low_c": d["mintemp_c"],
+                "high_f": d["maxtemp_f"],
+                "low_f": d["mintemp_f"],
+                "condition": d["condition"]["text"],
+                "rain_chance_pct": d["daily_chance_of_rain"],
+                "humidity_pct": d["avghumidity"],
+                "uv_index": d["uv"],
+                "sunrise": day["astro"]["sunrise"],
+                "sunset": day["astro"]["sunset"],
+            }
+        )
+
+    advice = []
+    if cur.get("precip_mm", 0) > 1 or cur.get("humidity", 0) > 80:
+        advice.append("Carry an umbrella.")
+    t = cur.get("temp_c", 20)
+    if t > 35:
+        advice.append("Extreme heat — stay hydrated.")
+    elif t > 28:
+        advice.append("Wear light clothing.")
+    elif t < 15:
+        advice.append("Bring a jacket.")
+
+    return {
+        "location_label": location_label,
+        "location_precision": precision,
+        "city": loc_data["name"],
+        "country": country,
+        "country_code": country_code,
+        "local_time": loc_data.get("localtime"),
+        "temperature_c": cur["temp_c"],
+        "temperature_f": cur["temp_f"],
+        "feels_like_c": cur["feelslike_c"],
+        "feels_like_f": cur["feelslike_f"],
+        "condition": cur["condition"]["text"],
+        "humidity_pct": cur["humidity"],
+        "wind_kph": cur["wind_kph"],
+        "wind_direction": cur["wind_dir"],
+        "uv_index": cur.get("uv", 0),
+        "visibility_km": cur.get("vis_km", 0),
+        "cloud_cover_pct": cur.get("cloud", 0),
+        "pressure_hpa": cur.get("pressure_mb"),
+        "sunrise": cur.get("sunrise", ""),
+        "sunset": cur.get("sunset", ""),
+        "forecast": forecast_days,
+        "advice": " ".join(advice) or "Pleasant conditions.",
     }
 
 
@@ -714,20 +769,12 @@ async def get_clothing_advice_post(request: dict):
 
     # Generate clothing advice
     advice = generate_clothing_advice(
-        temp_c=cur["temp_c"], condition=condition, rain_chance=rain_chance, uv_index=uv_index
+        temp_c=cur["temp_c"],
+        condition=condition,
+        rain_chance=rain_chance,
+        uv_index=uv_index,
+        occasion=occasion,
     )
-
-    # Adjust for occasion
-    if occasion == "formal":
-        advice["items"] = [item for item in advice["items"] if "T-shirt" not in item["name"]]
-        advice["items"].append(
-            {"icon": "👔", "name": "Formal attire", "note": "Consider dress code requirements"}
-        )
-        advice["summary"] = "Formal weather-ready"
-    elif occasion == "work":
-        advice["items"].append(
-            {"icon": "💼", "name": "Work-appropriate layers", "note": "Business casual options"}
-        )
 
     return {
         "city": loc.get("city_name"),

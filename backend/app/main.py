@@ -504,6 +504,7 @@ from app.api.routes import (
     search,
     notifications,
     search_history,
+    chat_history,
 )
 from app.middleware.rate_limit import rate_limit_middleware
 from app.core.config import settings
@@ -783,6 +784,7 @@ app.include_router(conversations.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(search_history.router, prefix="/api")
+app.include_router(chat_history.router, prefix="/api")
 
 # ─────────────────────────────────────────────────────────────
 # HEALTH ENDPOINTS

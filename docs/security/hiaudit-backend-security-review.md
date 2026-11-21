@@ -2,7 +2,7 @@
 
 ## Audit context
 
-- **Application:** EL-Exousia Weather Intel
+- **Application:** Elexousia Weather Intel
 - **Repository:** https://github.com/sancy1/elexousia-weather-app
 - **Audited scope:** `./backend` only
 - **Audit tool:** Hi AUDIT Agent

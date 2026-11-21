@@ -46,12 +46,16 @@ async def chat(request: ChatRequest, user: Optional[WeatherUser] = Depends(get_o
                 session_id=request.session_id,
                 city_context=request.city_context,
                 unit=request.unit,
+                user_id=user.id if user else None,
             ):
                 # Format as SSE event
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
-            logger.error(f"Chat streaming error: {e}")
-            error_event = {"type": "error", "detail": str(e)}
+            logger.error(f"Chat streaming error: {e}", exc_info=True)
+            error_event = {
+                "type": "error",
+                "detail": "Something went wrong while generating a response. Please try again.",
+            }
             yield f"data: {json.dumps(error_event)}\n\n"
 
     return StreamingResponse(
