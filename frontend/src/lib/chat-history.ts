@@ -4,7 +4,42 @@
  */
 
 import { apiClient } from "./api-client";
+import type { QueryClient } from "@tanstack/react-query";
 import type { ConversationSummary, ConversationExchange } from "./api-types";
+
+/**
+ * Optimistically prepend a temporary conversation entry for `sessionId`
+ * to every cached ["chat", "conversations"] query. Skips if the session is
+ * already tracked (prevents duplicates). The temp entry uses a negative id
+ * and is replaced by the real server row on the next invalidation/refetch.
+ */
+export function optimisticAddConversation(
+  queryClient: QueryClient,
+  sessionId: string,
+  title: string,
+  cityName: string | null
+): void {
+  const now = new Date().toISOString();
+  queryClient.setQueriesData<{ conversations: ConversationSummary[] }>(
+    { queryKey: ["chat", "conversations"] },
+    (old) => {
+      if (!old) return old;
+      if (old.conversations.some((c) => c.session_id === sessionId)) {
+        return old;
+      }
+      const temp: ConversationSummary = {
+        id: -Date.now(),
+        session_id: sessionId,
+        title: title.trim().slice(0, 80) || "Weather chat",
+        city_name: cityName,
+        message_count: 0,
+        created_at: now,
+        last_active_at: now,
+      };
+      return { conversations: [temp, ...old.conversations] };
+    }
+  );
+}
 
 export const chatHistoryApi = {
   /**

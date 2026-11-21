@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback } from "react";
 import { CloudSun, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { Sidebar } from "@/components/weather/Sidebar";
@@ -16,7 +17,7 @@ import { useWeatherDetail } from "@/hooks/useWeatherDetail";
 import { useClothingAdvice } from "@/hooks/useClothingAdvice";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
-import { chatHistoryApi } from "@/lib/chat-history";
+import { chatHistoryApi, optimisticAddConversation } from "@/lib/chat-history";
 import type { ConversationSummary } from "@/lib/api-types";
 import type { Condition } from "@/components/weather/data";
 
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [unit, setUnit] = useState<"C" | "F">("C");
   const [activeHistory, setActiveHistory] = useState("1");
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat);
@@ -180,7 +182,16 @@ function Index() {
   const handleSend = async (text: string) => {
     const id = Date.now().toString();
     setMessages((m) => [...m, { id, role: "user", text, time: "now" }]);
-    
+
+    // Optimistically surface this session in Chat History the moment the
+    // first message is accepted — the backend only creates the conversation
+    // row after the response completes, so without this the entry would not
+    // appear until a refresh. A negative temp id is replaced by the real row
+    // on the post-response invalidation below.
+    if (sessionId) {
+      optimisticAddConversation(queryClient, sessionId, text, locationLabel || city || null);
+    }
+
     const agentId = Date.now().toString() + "_agent";
     setStreamingMessageId(agentId);
     setMessages((m) => [...m, { id: agentId, role: "agent", text: "", time: "now" }]);
@@ -206,6 +217,10 @@ function Index() {
         )
       );
       setStreamingMessageId(null);
+    } finally {
+      // Reconcile optimistic history entry with the real conversation row
+      // (created server-side once the exchange is persisted).
+      queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
     }
   };
 

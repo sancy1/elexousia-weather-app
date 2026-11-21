@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Search, Plus, MessageSquare, MapPin, Loader2,
   AlertCircle, Inbox, RefreshCw, Trash2, User,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { SidebarHeader } from "@/components/weather/SidebarHeader";
 import { useConversations } from "@/hooks/useConversations";
 import { chatHistoryApi } from "@/lib/chat-history";
 import { toast } from "sonner";
@@ -15,6 +18,13 @@ interface Props {
   onNewChat: () => void;
   onConversationDeleted?: (conv: ConversationSummary) => void;
   sessionId?: string;
+  /** session_id of the currently open conversation — used for highlighting */
+  activeSessionId?: string;
+  /** Shared sidebar header controls (same as main sidebar) */
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  onMobileClose?: () => void;
+  showLabels?: boolean;
 }
 
 type GroupKey = "Today" | "Yesterday" | "Previous 7 days" | "Older";
@@ -47,8 +57,9 @@ function relativeTime(dateStr: string | null): string {
 
 const GROUP_ORDER: GroupKey[] = ["Today", "Yesterday", "Previous 7 days", "Older"];
 
-export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onConversationDeleted, sessionId }: Props) {
-  const { user } = useAuth();
+export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onConversationDeleted, sessionId, activeSessionId, collapsed = false, onToggleCollapse, onMobileClose, showLabels = true }: Props) {
+  const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [clearing, setClearing] = useState(false);
@@ -73,7 +84,7 @@ export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onCo
       await chatHistoryApi.deleteConversation(conv.id, user ? undefined : sessionId);
       toast.success("Conversation deleted");
       onConversationDeleted?.(conv);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
     } catch {
       toast.error("Couldn't delete the conversation. Try again.");
     } finally {
@@ -95,7 +106,7 @@ export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onCo
       const res = await chatHistoryApi.clearConversations(user ? undefined : sessionId);
       toast.success(`Cleared ${res.deleted} conversation${res.deleted === 1 ? "" : "s"}`);
       onConversationDeleted?.({ id: -1, session_id: sessionId ?? "", title: "", city_name: null, message_count: 0, created_at: null, last_active_at: null });
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
     } catch {
       toast.error("Couldn't clear history. Try again.");
     } finally {
@@ -114,6 +125,14 @@ export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onCo
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Same logo header as the main sidebar */}
+      <SidebarHeader
+        showLabels={showLabels}
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse ?? (() => {})}
+        onMobileClose={onMobileClose}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-2 px-3 h-[52px] border-b border-border shrink-0">
         <button
@@ -152,10 +171,10 @@ export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onCo
             className="w-full h-9 pl-9 pr-3 rounded-lg bg-secondary/60 border border-border text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all"
           />
         </div>
-        {!user && (
+        {!user && !authLoading && (
           <p className="text-[11px] text-muted-foreground flex items-start gap-1.5 px-1">
             <User className="h-3 w-3 mt-0.5 shrink-0" />
-            Guest history is temporary and only visible in this browser session. Sign in to keep it across devices.
+            Guest · history saved for this session only. Sign in to keep it across devices.
           </p>
         )}
       </div>
@@ -214,10 +233,14 @@ export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onCo
                   </span>
                 </div>
                 <div className="space-y-1">
-                  {items.map((conv) => (
+                  {items.map((conv) => {
+                    const isActive = !!activeSessionId && conv.session_id === activeSessionId;
+                    return (
                     <div
                       key={conv.id}
-                      className="w-full flex items-start gap-1 rounded-lg hover:bg-accent/40 transition-all group"
+                      className={`w-full flex items-start gap-1 rounded-lg hover:bg-accent/40 transition-all group ${
+                        isActive ? "bg-accent/60 shadow-[inset_0_0_0_1px_var(--border)]" : ""
+                      }`}
                     >
                       <button
                         onClick={() => onSelectConversation(conv)}
@@ -258,12 +281,38 @@ export function ChatHistoryPanel({ onBack, onSelectConversation, onNewChat, onCo
                         )}
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
           })
         )}
+      </div>
+
+      {/* Signed-in identity — same display as the main sidebar footer */}
+      <div className="border-t border-border p-3 shrink-0">
+        {!authLoading && user ? (
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-glow to-primary flex items-center justify-center text-[11px] font-semibold shrink-0 overflow-hidden">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-white">{user.initials}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-medium truncate text-white">{user.name}</div>
+              <div className="text-[10px] text-gray-400">{user.email}</div>
+            </div>
+            <UserMenu />
+          </div>
+        ) : !authLoading && !user ? (
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+            <User className="h-3 w-3 shrink-0" />
+            Guest · history saved for this session only
+          </p>
+        ) : null}
       </div>
     </div>
   );

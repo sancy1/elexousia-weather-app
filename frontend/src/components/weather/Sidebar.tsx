@@ -1248,14 +1248,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  CloudSun, Plus, Search, MapPin, Briefcase, Home, Plane,
-  PanelLeftClose, PanelLeftOpen, X, Trash2, Loader2, MessageSquare,
+  Plus, Search, MapPin, Briefcase, Home, Plane,
+  Trash2, Loader2, MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { weatherApi } from "@/lib/weather";
 import { ChatHistoryPanel } from "@/components/weather/ChatHistoryPanel";
+import { SidebarHeader } from "@/components/weather/SidebarHeader";
 import type { ConversationSummary } from "@/lib/api-types";
 
 interface SavedLocation {
@@ -1542,46 +1543,30 @@ export function Sidebar({ activeId, onSelect, onCitySelect, mobileOpen, onMobile
         <ChatHistoryPanel
           onBack={() => setSidebarView("main")}
           onSelectConversation={(conv) => {
-            setSidebarView("main");
+            // Keep the history panel open — only Back returns to main.
             onLoadConversation?.(conv);
           }}
           onNewChat={() => {
-            setSidebarView("main");
             onNewChat?.();
           }}
           onConversationDeleted={(conv) => {
             onConversationDeleted?.(conv);
           }}
           sessionId={sessionId}
+          activeSessionId={sessionId}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((c) => !c)}
+          onMobileClose={onMobileClose}
+          showLabels={showLabels}
         />
       ) : (
       <>
-      <div className="flex items-center gap-2.5 px-4 h-[52px] border-b border-border shrink-0">
-        <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-[0_0_20px_-5px_var(--primary-glow)]">
-          <CloudSun className="h-4 w-4 text-primary-foreground" strokeWidth={2.5} />
-        </div>
-        {showLabels && (
-          <div className="flex flex-col leading-tight flex-1 min-w-0">
-            <span className="text-[13px] font-semibold tracking-tight truncate">Elexousia</span>
-            <span className="text-[10px] text-muted-foreground tracking-wider uppercase truncate">Weather Intel</span>
-          </div>
-        )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="hidden md:flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-          title={collapsed ? "Expand" : "Collapse to icons"}
-        >
-          {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
-        </button>
-        {onMobileClose && (
-          <button
-            onClick={onMobileClose}
-            className="md:hidden h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      <SidebarHeader
+        showLabels={showLabels}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed((c) => !c)}
+        onMobileClose={onMobileClose}
+      />
 
       {showLabels && (
         <button
