@@ -41,11 +41,13 @@ An intelligent weather forecasting application powered by AI, featuring real-tim
 - **Real-Time Weather Data**: Current weather conditions with temperature, humidity, wind, UV index, and more
 - **7-Day Forecast**: Daily and hourly forecast views for any city worldwide
 - **AI Weather Assistant**: Conversational AI powered by LangChain, LangGraph, and RAG for personalized weather insights
-- **User Authentication**: OAuth integration with Google for secure user accounts
+- **Conversation Memory & Chat History**: Persistent, searchable chat history with per-user isolation and recent-context memory
+- **User Authentication**: OAuth integration with Google and GitHub for secure user accounts
 - **Saved Locations**: Save and manage your favorite weather locations
 - **Search History**: Track your recent weather searches
 - **Clothing Advice**: AI-powered recommendations based on weather conditions
 - **City Comparison**: Compare weather between multiple cities
+- **Precise Location (Opt-In)**: Browser geolocation resolves your nearest city; IP-based estimate used by default
 - **Notifications**: Automated weather alerts for extreme conditions (rain, heat, cold)
 - **Responsive Design**: Beautiful, modern UI that works on all devices
 
@@ -219,6 +221,10 @@ COOKIE_NAME=elexousia_session
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:8080,http://localhost:5173
+
+# RAG / vector city resolution (local dev only — requires Ollama embeddings)
+# Set to false in production: vector search is disabled on free-tier hosting
+RAG_VECTOR_SEARCH_ENABLED=true
 ```
 
 ### Frontend (.env)
@@ -299,16 +305,27 @@ Once the backend is running, access the interactive API documentation:
 - `GET /api/weather/forecast` - Get weather forecast
 - `GET /api/weather/hourly` - Get hourly forecast
 - `GET /api/weather/detail` - Get detailed weather information
+- `GET /api/weather/auto` - Auto-detect location from IP and return weather
+- `GET /api/weather/nearby` - Resolve coordinates to the nearest city (opt-in geolocation)
+- `GET /api/weather/compare` - Compare weather between two cities
+- `GET /api/weather/wear` - Get clothing advice for current conditions
+- `POST /api/weather/wear` - Get clothing advice for a specific date or occasion
 
 #### Authentication
 
 - `GET /api/auth/google` - Initiate Google OAuth
-- `GET /api/auth/callback` - OAuth callback
+- `GET /api/auth/google/callback` - Google OAuth callback
+- `GET /api/auth/github` - Initiate GitHub OAuth
+- `GET /api/auth/github/callback` - GitHub OAuth callback
 - `GET /api/auth/me` - Get current user
 
 #### AI Chat
 
-- `POST /api/chat` - Send message to AI assistant
+- `POST /api/chat` - Send message to AI assistant (SSE streaming)
+- `GET /api/chat/conversations` - List chat history (ownership-scoped)
+- `GET /api/chat/conversations/{id}/messages` - Get messages for a conversation
+- `DELETE /api/chat/conversations/{id}` - Delete a conversation
+- `DELETE /api/chat/conversations` - Clear all conversations
 
 #### User Features
 
@@ -342,7 +359,8 @@ Once the backend is running, access the interactive API documentation:
 - **LangChain** - AI framework for LLM orchestration
 - **LangGraph** - Agent workflow orchestration
 - **Groq / Ollama / Gemini** - Pluggable LLM providers (switch via `LLM_PROVIDER`)
-- **RAG** - Retrieval-Augmented Generation for context-aware responses
+- **pgvector** - Semantic city resolution via 1024-dim embeddings (local/dev only; disabled in production on free tier)
+- **RAG** - Retrieval-Augmented Generation for city-context retrieval (local/dev only)
 - **Pydantic** - Data validation
 - **Uvicorn** - ASGI server
 
@@ -358,10 +376,11 @@ Once the backend is running, access the interactive API documentation:
 elexousia-weather/
 ├── backend/                 # FastAPI backend
 │   ├── app/
-│   │   ├── agent/          # AI agent logic
+│   │   ├── agent/          # AI agent logic (tools, memory, retrieval)
 │   │   ├── api/            # API routes
 │   │   ├── core/           # Core configuration
 │   │   ├── infrastructure/ # Database & external services
+│   │   ├── services/       # Shared domain services (e.g. clothing advice)
 │   │   └── main.py         # Application entry point
 │   ├── migrations/         # Database migrations
 │   ├── requirements/       # Python dependencies (base/dev/prod)
